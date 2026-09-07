@@ -1,0 +1,26 @@
+﻿{
+  "name": "@camschool/baas-js",
+  "version": "1.0.0",
+  "description": "Universal JavaScript / TypeScript Client SDK for CamSchool BaaS (Backend-as-a-Service) for Web, Node.js, React, Vue, React Native.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "camschool",
+    "baas",
+    "backend-as-a-service",
+    "firestore",
+    "nosql",
+    "auth",
+    "storage",
+    "notifications",
+    "cameroon",
+    "sdk"
+  ],
+  "author": "CamSchool Team",
+  "license": "MIT"
+}
