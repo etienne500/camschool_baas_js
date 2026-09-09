@@ -1,128 +1,115 @@
-﻿# 🌐 CamSchool BaaS — SDK JavaScript & TypeScript Universel
+# 🚀 CamSchool BaaS — SDK JavaScript / TypeScript Officiel
 
-[![GitHub](https://img.shields.io/badge/GitHub-etienne500%2Fcamschool__baas__js-yellow?logo=github)](https://github.com/etienne500/camschool_baas_js)
-[![npm version](https://img.shields.io/badge/npm-1.0.0-cb3837?logo=npm)](https://www.npmjs.com)
+[![GitHub](https://img.shields.io/badge/GitHub-etienne500%2Fcamschool__baas__js-blue?logo=github)](https://github.com/etienne500/camschool_baas_js)
+[![npm](https://img.shields.io/badge/npm-v1.0.0-CB3837?logo=npm)](https://www.npmjs.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Client officiel JavaScript / TypeScript universel pour CamSchool BaaS (Backend-as-a-Service).**  
-> Fonctionne sur Navigateurs Web, Node.js (16+), React, Next.js, Vue 3, Nuxt, React Native et Electron.
+> **Client JS/TS universel pour CamSchool BaaS (Browser, Node.js, React, Vue, Next.js).**  
+> Moteur complet NoSQL, Auth Téléphone OTP, Cloud Storage, Push Notifications et **Paiements & Retraits Mobile Money (MTN, Orange, Cartes)**.
 
 ---
 
-## 🌟 Fonctionnalités
+## 📦 Installation
 
-* 🔥 **Base NoSQL Firestore-like** : Collections et documents JSON dynamiques, requêtes (`where`), tri (`orderBy`), pagination (`limit`, `page`), transactions et écritures par lots (*Batch writes*).
-* 📱 **Authentification Complète** :
-  * Inscription / Connexion par Email & Mot de passe.
-  * Connexion par **Numéro de Téléphone & OTP SMS** (MTN, Orange, etc.).
-  * Mode Invité / Connexion Anonyme.
-  * Auto-restauration de la session JWT dans le `localStorage` navigateur.
-  * Écouteur réactif des changements d'état (`onAuthStateChange`).
-* 💾 **Cloud Storage** : Upload direct de fichiers (`File`, `Blob`, `Buffer`), URLs publiques et URLs signées temporaires.
-* 🔔 **Notifications Push** : Enregistrement de device tokens (Web / Android / iOS) et envoi ciblé par Topics.
-* 🛡️ **Typage TypeScript Exhaustif** : IntelliSense complet avec types génériques `collection<T>()`.
-
----
-
-## 📦 Installation Directe depuis GitHub
-
-### Via NPM :
 ```bash
-npm install github:etienne500/camschool_baas_js
-```
-
-### Via Yarn :
-```bash
-yarn add https://github.com/etienne500/camschool_baas_js.git
-```
-
-### Via CDN (Sans outil de build / HTML pur) :
-```html
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/gh/etienne500/camschool_baas_js/src/index.js';
-  // ...
-</script>
+npm install camschool-baas
+# ou via CDN HTML
+<script src="https://unpkg.com/camschool-baas/dist/baas.min.js"></script>
 ```
 
 ---
 
 ## ⚙️ Initialisation
 
-```typescript
-import { createClient } from 'camschool_baas_js'; // ou @camschool/baas-js
+```javascript
+import { BaaS, BaasPay } from 'camschool-baas';
 
-export const baas = createClient({
-  baseUrl: 'https://votre-api-camschool.cm',
-  projectId: 'votre_project_id',
-  apiKey: 'baas_pub_xxxxxxxxxxxxxxxxxxxx',
-  autoRestoreSession: true, // Restauration automatique du token au rafraîchissement
+const baas = BaaS.initialize({
+  baseUrl: 'https://camschool.kmrshop.com', // URL BaaS Cloud Officiel
+  projectId: 'proj_zf3qirtdv4xc', // Votre Project ID
+  apiKey: 'pk_live_Gjh1W9LY8DpJJJyfUuW4iGqHewiJhRDvrb9gyCZI', // Clé Publique
 });
+
+// Initialiser le widget Web UI
+BaasPay.initialize(baas);
 ```
 
 ---
 
-## 📖 Exemples de Code
+## 💳 1. PAIEMENTS & RETRAITS (MOBILE MONEY & CARTES)
 
-### 1. 🔐 Authentification (Email & Téléphone OTP)
-```typescript
-// Connexion Email
-const { user, token } = await baas.auth.signInWithEmail('professeur@camschool.cm', 'SecretPassword!');
-
-// Authentification Téléphone OTP
-const { otp_token } = await baas.auth.sendPhoneOtp('+237695512390');
-const auth = await baas.auth.verifyPhoneOtp('+237695512390', '482910', otp_token);
-
-// Écouteur réactif de session
-baas.auth.onAuthStateChange((user) => {
-  console.log('Utilisateur actif :', user?.displayName);
+### A. Modal de Paiement Web Drop-in (Vanilla JS / React / HTML)
+```javascript
+BaasPay.openPaymentModal({
+  amount: 5000,
+  currency: 'XAF',
+  description: 'Commande Panier KmrShop #4829',
+  customerName: 'Jean Dupont',
+  onSuccess: (transaction) => {
+    console.log('✅ Paiement validé :', transaction.reference);
+    alert('Paiement réussi ! Réf: ' + transaction.reference);
+  },
+  onError: (error) => {
+    console.error('❌ Erreur :', error);
+  },
 });
 ```
 
-### 2. 🗄️ Base NoSQL (CRUD, Requêtes & Batch)
-```typescript
+### B. Initier un Paiement par API (PayIn - 7% Frais)
+```javascript
+const payin = await baas.payments.initiatePayin({
+  amount: 10000,
+  paymentMethod: 'MTN_MOMO', // ou 'ORANGE_MONEY', 'CARD'
+  phone: '670000000',
+  description: 'Achat Article',
+});
+
+console.log('Réf:', payin.reference);
+console.log('Frais 7%:', payin.fee_amount, 'XAF');
+console.log('Net reçu:', payin.net_amount, 'XAF');
+
+// Attendre confirmation automatique
+const confirmedTx = await baas.payments.pollTransaction(payin.reference, {
+  onUpdate: (tx) => console.log('Statut actuel :', tx.status),
+});
+console.log('Transaction finale confirmée :', confirmedTx);
+```
+
+### C. Initier un Retrait (PayOut - 0% Frais)
+```javascript
+const payout = await baas.payments.initiatePayout({
+  amount: 15000,
+  paymentMethod: 'ORANGE_MONEY',
+  phone: '690000000',
+  beneficiaryName: 'Paul Kamdem',
+  description: 'Retrait de solde vendeur',
+});
+
+console.log('Retrait en cours de traitement :', payout.reference);
+```
+
+---
+
+## 🗄️ 2. BASE DE DONNÉES NoSQL
+
+```javascript
 // Ajouter un document
-const docRef = await baas.collection('courses').add({
-  title: 'Sciences Physiques',
-  teacher: 'Mme Fouda',
-  coefficient: 4,
-  published: true,
+const doc = await baas.collection('products').add({
+  name: 'Chaussures Sport',
+  price: 15000,
+  in_stock: true,
 });
 
 // Requête filtrée
-const courses = await baas
-  .collection('courses')
-  .where('coefficient', '>=', 4)
-  .orderBy('coefficient', 'desc')
-  .limit(10)
+const products = await baas.collection('products')
+  .whereEqualTo('in_stock', true)
+  .orderBy('price', 'desc')
+  .limit(20)
   .get();
-
-// Batch write atomique
-const batch = baas.database.batch();
-batch.set(baas.collection('stats').doc('today'), { visits: 1200 });
-batch.update(baas.collection('courses').doc('phys-101'), { published: true });
-await batch.commit();
 ```
-
-### 3. 📁 Cloud Storage (Upload HTML input)
-```typescript
-const file = document.querySelector('input[type=file]').files[0];
-
-const fileInfo = await baas.storage.upload(`devoirs/${file.name}`, file, {
-  isPublic: true,
-});
-
-console.log('Fichier disponible sur :', fileInfo.url);
-```
-
----
-
-## 📚 Documentation Complète
-
-Pour consulter le guide exhaustif étape par étape avec architecture, gestion des erreurs, exemples React / Next.js / Vue 3 et Node.js, veuillez lire le fichier **[doc.md](./doc.md)**.
 
 ---
 
 ## 📄 Licence
-
-Ce projet est sous licence MIT - voir le fichier [LICENSE](./LICENSE) pour plus de détails.
+Licence MIT - voir le fichier [LICENSE](./LICENSE).

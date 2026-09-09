@@ -1,7 +1,8 @@
-﻿import { BaasConfig } from './types';
+import { BaasConfig } from './types';
 import { BaasAuth } from './auth';
 import { BaasDatabase, BaasCollectionReference } from './database';
 import { BaasStorage } from './storage';
+import { BaasPayments } from './payments';
 import { BaasNotifications } from './notifications';
 import {
   BaasError,
@@ -22,6 +23,7 @@ export class BaasClient {
   public auth: BaasAuth;
   public database: BaasDatabase;
   public storage: BaasStorage;
+  public payments: BaasPayments;
   public notifications: BaasNotifications;
 
   constructor(config: BaasConfig) {
@@ -35,6 +37,7 @@ export class BaasClient {
     this.auth = new BaasAuth(this);
     this.database = new BaasDatabase(this);
     this.storage = new BaasStorage(this);
+    this.payments = new BaasPayments(this);
     this.notifications = new BaasNotifications(this);
 
     // Auto-restore session from localStorage if in browser environment

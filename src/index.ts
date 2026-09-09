@@ -1,4 +1,4 @@
-﻿import { BaasClient } from './client';
+import { BaasClient } from './client';
 import { BaasConfig } from './types';
 
 /**
@@ -17,3 +17,6 @@ export * from './storage';
 export * from './notifications';
 
 export default createClient;
+
+export * from './payments';
+export * from './widgets';
