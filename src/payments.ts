@@ -39,7 +39,7 @@ export interface BaasTransaction {
 
 export interface PayinOptions {
   amount: number;
-  paymentMethod: 'MTN_MOMO' | 'ORANGE_MONEY' | 'CARD' | 'EU_MOBILE' | string;
+  paymentMethod: 'orange_money' | 'mtn_momo' | 'PayPal' | 'card' | 'ORANGE_MONEY' | 'MTN_MOMO' | 'PAYPAL' | 'CARD' | string;
   phone?: string;
   customerName?: string;
   customerEmail?: string;
@@ -94,6 +94,40 @@ export interface PayoutResult {
   created_at: string;
 }
 
+export interface CheckoutSessionOptions {
+  amount: number;
+  currency?: string;
+  allowedMethods?: string[];
+  customerName?: string;
+  customerEmail?: string;
+  phone?: string;
+  description?: string;
+  notifyUrl?: string;
+  successUrl?: string;
+  failUrl?: string;
+  callbackUrl?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface CheckoutSessionResult {
+  success: boolean;
+  transaction_id: number | string;
+  reference: string;
+  checkout_url: string;
+  status: string;
+  gross_amount: number;
+  currency: string;
+  description?: string;
+  allowed_methods: string[];
+  notify_url?: string;
+  success_url?: string;
+  fail_url?: string;
+  message: string;
+  created_at: string;
+}
+
 export class BaasPayments {
   constructor(private client: BaaS) {}
 
@@ -103,6 +137,29 @@ export class BaasPayments {
   async getPaymentMethods(): Promise<BaasPaymentMethod[]> {
     const res = await this.client.request<{ data: BaasPaymentMethod[] }>('GET', 'payments/methods');
     return res.data || [];
+  }
+
+  /**
+   * Créer une session de paiement hébergée (Hosted Checkout Link)
+   * Retourne une URL unique vers laquelle rediriger l'utilisateur.
+   * À la fin du paiement, CamSchool BaaS envoie les données vers notify_url (IPN webhook)
+   * et redirige le client vers success_url ou fail_url.
+   */
+  async createCheckoutSession(options: CheckoutSessionOptions): Promise<CheckoutSessionResult> {
+    const res = await this.client.request<CheckoutSessionResult>('POST', 'payments/checkout', {
+      amount: options.amount,
+      currency: options.currency || 'XAF',
+      allowed_methods: options.allowedMethods,
+      customer_name: options.customerName,
+      customer_email: options.customerEmail,
+      phone: options.phone,
+      description: options.description,
+      notify_url: options.notifyUrl || options.callbackUrl,
+      success_url: options.successUrl || options.returnUrl,
+      fail_url: options.failUrl || options.cancelUrl,
+      metadata: options.metadata,
+    });
+    return res;
   }
 
   /**

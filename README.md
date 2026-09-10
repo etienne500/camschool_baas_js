@@ -6,328 +6,358 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **SDK Universel Client & Backend pour CamSchool BaaS.**  
-> Alternative puissante, moderne et souveraine à Firebase / Supabase avec support natif du NoSQL Firestore-like, de l'Auth multi-canal (Email, Téléphone OTP SMS, Anonyme), du Cloud Storage, des Push Notifications FCM, et des **Paiements & Retraits Mobile Money (MTN MoMo, Orange Money, Cartes bancaires)**.
+> Alternative puissante, moderne et souveraine à Firebase / Supabase avec support natif du NoSQL Firestore-like, de l'Auth multi-canal (Email, Téléphone avec mot de passe ou SMS OTP, Anonyme), du Cloud Storage, des Push Notifications et des **Paiements & Retraits universels (`orange_money`, `mtn_momo`, `PayPal`, `card`)**.
 
 ---
 
-## 📑 Table des Matières
+## 📑 Sommaire
 
-1. [📦 Installation](#-installation)
-2. [⚙️ Initialisation](#️-initialisation)
-3. [🔐 Authentification Utilisateurs](#-authentification-utilisateurs)
-4. [🗄️ Base de Données NoSQL (Firestore-like)](#️-base-de-données-nosql-firestore-like)
-   - [CRUD de Base](#crud-de-base)
-   - [Requêtes avec Filtres Avancés (Where, Search, OrderBy, Limit)](#requêtes-avec-filtres-avancés)
-   - [Opérations Atomiques ($inc, $push, $pull, $unset)](#opérations-atomiques)
-   - [Écritures Batch Transactionnelles](#écritures-batch-transactionnelles)
-5. [☁️ Cloud Storage (Fichiers & Médias)](#️-cloud-storage-fichiers--médias)
-6. [🔔 Push Notifications (FCM)](#-push-notifications-fcm)
-7. [💳 Paiements & Retraits Mobile Money](#-paiements--retraits-mobile-money)
-8. [🛡️ Gestion des Erreurs](#️-gestion-des-erreurs)
+1. [🌟 Fonctionnalités](#-fonctionnalités)
+2. [📦 Installation](#-installation)
+3. [⚡ Initialisation Rapide](#-initialisation-rapide)
+4. [🔐 Authentification (Email, Téléphone, OTP, Anonyme)](#-authentification)
+5. [🗄️ Base de Données NoSQL (Query Builder Avancé)](#️-base-de-données-nosql)
+6. [☁️ Cloud Storage (Fichiers, Médias)](#️-cloud-storage)
+7. [🔔 Notifications Push](#-notifications-push)
+8. [💳 Module Paiements & Retraits (`orange_money`, `mtn_momo`, `PayPal`, `card`)](#-module-paiements--retraits)
+9. [🛡️ Sécurité & Bonnes Pratiques](#️-sécurité--bonnes-pratiques)
+10. [📄 Licence & Support](#-licence--support)
+
+---
+
+## 🌟 Fonctionnalités
+
+* 🗄️ **Base de Données NoSQL Document-Store (Firestore-like)** :
+  * Documents JSON avec ID uniques.
+  * Requêtes avec indexation rapide : `where`, `orderBy`, `limit`, `offset`, `search`.
+  * Opérateurs avancés : `==`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `not_in`, `array-contains`, `starts_with`.
+  * Incrémentation atomique `$inc` et fusions de documents en direct.
+* 🔐 **Authentification Multi-Canal Complète** :
+  * Inscription & Connexion par **Email / Mot de passe** (`signUpWithEmail`, `signInWithEmail`).
+  * Inscription & Connexion par **Numéro de Téléphone / Mot de passe** (`signUpWithPhone`, `signInWithPhone`).
+  * Authentification par **SMS OTP** (`sendPhoneOtp`, `verifyPhoneOtp`).
+  * Connexion **Anonyme / Invité** (`signInAnonymously`).
+  * Gestion et rafraîchissement automatique des tokens JWT (`localStorage` / `sessionStorage`).
+* ☁️ **Cloud Storage Haute Vitesse** :
+  * Upload d'images, vidéos, documents PDF avec URLs CDN sécurisées.
+* 🔔 **Notifications Push** :
+  * Enregistrement en direct des tokens FCM / WebPush.
+* 💳 **Paiements & Retraits Universels (BaaS Pay)** :
+  * Moyens de paiement supportés : **`'orange_money'`**, **`'mtn_momo'`**, **`'PayPal'`**, **`'card'`** (Visa/Mastercard).
+  * Encaissements (PayIn) et Retraits automatiques (PayOut).
+  * Widgets UI intégrables en 1 ligne ou API programmatique complète.
 
 ---
 
 ## 📦 Installation
 
-### Via Gestionnaire de Paquets (Node.js, React, Vue, Next.js, Angular, Svelte)
-
+### NPM / Yarn / PNPM :
 ```bash
-npm install camschool-baas
-# ou avec yarn / pnpm / bun
-yarn add camschool-baas
-pnpm add camschool-baas
-bun add camschool-baas
+npm install camschool_baas_js
+# ou
+yarn add camschool_baas_js
 ```
 
-### Via CDN (Vanilla HTML / JavaScript / PWA)
-
+### CDN / Navigateur HTML :
 ```html
-<!-- Version UMD Universelle -->
-<script src="https://camschool.kmrshop.com/api/baas/v1/sdk/camschool-baas.min.js"></script>
+<script src="https://camschool.kmrshop.com/packages/camschool_baas_js/dist/baas.umd.js"></script>
 ```
 
 ---
 
-## ⚙️ Initialisation
+## ⚡ Initialisation Rapide
 
-```javascript
-import { createClient } from 'camschool-baas';
+```typescript
+import { CamSchoolBaaS } from 'camschool_baas_js';
 
-// Initialisation du client
-const baas = createClient({
-  projectId: 'proj_zf3qirtdv4xc',
-  apiKey: 'pk_live_smULRpyZL00lxUVG97sZ9o0ruB9MxUw7UXg8GfTw', // Clé Publique (Frontend)
-  baseUrl: 'https://camschool.kmrshop.com/api/baas/v1/proj_zf3qirtdv4xc',
-  // secretKey: 'sk_live_...' // Uniquement côté Backend Node.js / Serverless
+const baas = CamSchoolBaaS.init({
+  projectId: 'proj_zf3qirtdv4xc', // ID de votre projet BaaS
+  publicKey: 'pk_live_smULRpyZL00lxUVG97sZ9o0ruB9MxUw7UXg8GfTw', // Clé Publique
+  baseUrl: 'https://camschool.kmrshop.com/api/baas/v1',
+});
+```
+
+---
+
+## 🔐 Authentification
+
+### 1. Inscription & Connexion par Numéro de Téléphone
+
+```typescript
+// Inscription par Téléphone + Mot de passe
+const signupResult = await baas.auth.signUpWithPhone(
+  '+237655797860',
+  'MonMotDePasseSecurise123!',
+  'Adonis BOPDA',
+  { ville: 'Yaoundé', profession: 'Développeur' }
+);
+console.log('Utilisateur inscrit :', signupResult.user);
+
+// Connexion par Téléphone + Mot de passe
+const loginResult = await baas.auth.signInWithPhone(
+  '+237655797860',
+  'MonMotDePasseSecurise123!'
+);
+console.log('Utilisateur connecté :', loginResult.user);
+```
+
+### 2. Inscription & Connexion par Email
+
+```typescript
+// Inscription par Email
+await baas.auth.signUpWithEmail('alex@camschool.cm', 'Pass@1234', 'Alexandre');
+
+// Connexion par Email
+await baas.auth.signInWithEmail('alex@camschool.cm', 'Pass@1234');
+```
+
+### 3. Authentification par SMS OTP
+
+```typescript
+// Étape 1 : Demander l'envoi du code OTP
+const { token } = await baas.auth.sendPhoneOtp('+237697336094');
+
+// Étape 2 : Vérifier le code reçu
+await baas.auth.verifyPhoneOtp('+237697336094', '123456', token);
+```
+
+### 4. Connexion Anonyme & Écoute de session
+
+```typescript
+// Connexion Invité
+await baas.auth.signInAnonymously();
+
+// Écouter les changements d'état
+const unsubscribe = baas.auth.onAuthStateChange((user) => {
+  console.log('État utilisateur :', user ? user.email || user.phone_number : 'Déconnecté');
 });
 
-// Références aux modules
-const auth = baas.auth;
-const db = baas.database;
-const storage = baas.storage;
-const notifications = baas.notifications;
-const payments = baas.payments;
+// Déconnexion
+baas.auth.signOut();
 ```
 
 ---
 
-## 🔐 Authentification Utilisateurs
+## 🗄️ Base de Données NoSQL
 
-### 1. Inscription & Connexion par Email
+### 1. Créer ou Mettre à Jour un Document
 
-```javascript
-// Inscription d'un nouvel utilisateur
-const newUser = await auth.signUpWithEmail(
-  'auteur@exemple.com',
-  'MotDePasseSecurise123!',
-  'Jean Dupont',
-  { role: 'author', city: 'Douala', phone: '+237699000000' }
-);
-console.log('Utilisateur créé avec token:', newUser.token);
-
-// Connexion
-const session = await auth.signInWithEmail('auteur@exemple.com', 'MotDePasseSecurise123!');
-console.log('Connecté avec succès:', session.user);
-
-// Profil de l'utilisateur connecté
-const profile = await auth.getProfile();
-console.log('Mon profil:', profile);
-```
-
-### 2. Authentification par Téléphone + OTP SMS
-
-```javascript
-// 1. Envoi du code OTP par SMS
-const otpResponse = await auth.sendPhoneOtp('+237699000000');
-console.log('SMS envoyé, session_token:', otpResponse.session_token);
-
-// 2. Vérification du code reçu
-const authSession = await auth.verifyPhoneOtp(
-  '+237699000000',
-  '123456',
-  otpResponse.session_token
-);
-console.log('Connexion réussie:', authSession.user);
-```
-
-### 3. Connexion Anonyme
-
-```javascript
-// Idéal pour sessions invités, paniers temporaires
-const guestSession = await auth.signInAnonymously('device_unique_uuid');
-```
-
----
-
-## 🗄️ Base de Données NoSQL (Firestore-like)
-
-### CRUD de Base
-
-```javascript
-// 1. Ajouter un document avec ID auto-généré
-const docRef = await db.collection('books').add({
-  title: 'Le Soleil des Indépendances',
-  author: 'Ahmadou Kourouma',
-  price: 2500,
-  category: 'Roman',
-  status: 'published',
-  views: 0
+```typescript
+// Créer un document avec ID automatique
+const docRef = await baas.database.collection('livres').add({
+  titre: 'NGÙL LEKAN Tome 1',
+  auteur: 'BDSTARS 237',
+  prix: 3000,
+  categorie: 'Bande Dessinée',
+  tags: ['bd', 'cameroun', 'culture'],
+  is_published: true,
+  created_at: new Date().toISOString(),
 });
-console.log('Document inséré ID:', docRef.id);
 
-// 2. Définir ou écraser un document avec ID spécifique
-await db.collection('books').doc('book_001').set({
-  title: 'Les Bouts de bois de Dieu',
-  author: 'Ousmane Sembène',
-  price: 3000,
-  status: 'published'
-}, { merge: true });
+// Écrire avec ID explicite
+await baas.database.collection('livres').doc('livre_ngul_01').set({
+  titre: 'NGÙL LEKAN Tome 1',
+  prix: 3000,
+});
 
-// 3. Récupérer un document unique
-const bookDoc = await db.collection('books').doc('book_001').get();
-if (bookDoc.exists) {
-  console.log('Données du livre:', bookDoc.data);
-}
-
-// 4. Supprimer un document
-await db.collection('books').doc('book_001').delete();
+// Mise à jour partielle avec incrémentation atomique ($inc)
+await baas.database.collection('livres').doc('livre_ngul_01').update({
+  vues: { $inc: 1 },
+  prix: 3500,
+});
 ```
 
----
+### 2. Requêtes Avancées & Filtres Puissants
 
-### 🔍 Requêtes avec Filtres Avancés
-
-Le moteur de requêtes CamSchool BaaS prend en charge les filtres riches chaînés, la recherche textuelle, le tri multi-champs et la pagination :
-
-```javascript
-// Requête complexe chaînée
-const snapshot = await db.collection('books')
-  .where('status', '==', 'published')            // Égalité
-  .where('price', '<=', 5000)                    // Comparaison numérique
-  .where('category_id', 'in', [1, 5, 13])        // Appartenance à une liste
-  .where('tags', 'array-contains', 'afrique')    // Recherche dans tableau
-  .orderBy('created_at', 'desc')                 // Tri descendant
-  .limit(10)                                     // Pagination
-  .page(1)
+```typescript
+// Requête multi-critères NoSQL haute vitesse
+const snapshot = await baas.database
+  .collection('livres')
+  .where('categorie', '==', 'Bande Dessinée')
+  .where('prix', '<=', 5000)
+  .where('tags', 'array-contains', 'cameroun')
+  .orderBy('created_at', 'desc')
+  .limit(20)
   .get();
 
-console.log(`Total trouvé: ${snapshot.total}, Page actuelle: ${snapshot.currentPage}`);
-snapshot.docs.forEach(doc => {
-  console.log(`- ${doc.data.title} (${doc.data.price} XAF)`);
-});
-
-// Recherche plein texte ultra-rapide
-const searchResults = await db.collection('books')
-  .search('NGÙL LEKAN')
-  .limit(5)
-  .get();
+console.log('Résultats trouvés :', snapshot.docs);
 ```
 
-#### Opérateurs de filtrage supportés :
-| Opérateur | Syntaxe JS | Description |
+#### Opérateurs NoSQL Disponibles :
+
+| Opérateur | Description | Exemple |
 | :--- | :--- | :--- |
-| **Égalité** | `==`, `=`, `eq` | Correspondance exacte (texte, nombre, booléen, null) |
-| **Différence** | `!=`, `<>`, `neq` | Différent de la valeur spécifiée |
-| **Supériorité** | `>`, `gt`, `>=`, `gte` | Supérieur ou supérieur ou égal (numérique ou date) |
-| **Infériorité** | `<`, `lt`, `<=`, `lte` | Inférieur ou inférieur ou égal |
-| **Inclusivité** | `in` | Présent dans la liste `[val1, val2, ...]` |
-| **Exclusion** | `not_in` | Absent de la liste `[val1, val2, ...]` |
-| **Tableau / Texte** | `array-contains`, `contains`, `like` | Élément présent dans un tableau ou sous-chaîne |
-| **Préfixe** | `starts_with` | Commence par le préfixe spécifié |
+| `==` ou `=` | Égalité stricte | `.where('status', '==', 'active')` |
+| `!=` ou `<>` | Différence | `.where('role', '!=', 'banned')` |
+| `>`, `>=` | Comparaison numérique / date supérieure | `.where('prix', '>=', 1000)` |
+| `<`, `<=` | Comparaison numérique / date inférieure | `.where('vues', '<', 500)` |
+| `in` | Appartient à une liste | `.where('ville', 'in', ['Douala', 'Yaoundé'])` |
+| `not_in` | N'appartient pas à la liste | `.where('tag', 'not_in', ['archive'])` |
+| `array-contains` | Tableau JSON contient la valeur | `.where('passions', 'array-contains', 'Musique')` |
+| `starts_with` | Commence par le préfixe | `.where('titre', 'starts_with', 'NGÙL')` |
+| `.search()` | Recherche textuelle globale | `.collection('livres').search('Aventure').get()` |
 
 ---
 
-### ⚡ Opérations Atomiques
+## ☁️ Cloud Storage
 
-Modifiez des champs sans risque de concurrence :
+```typescript
+const fileInput = document.querySelector<HTMLInputElement>('#fileInput')!;
+const file = fileInput.files![0];
 
-```javascript
-// Incrémentation atomique du nombre de vues et de likes
-await db.collection('books').doc('book_001').update({
-  $inc: {
-    views_count: 1,
-    likes_count: 5
-  },
-  $push: {
-    readers: 'user_123'  // Ajoute à un tableau sans écraser
-  }
+// Téléversement d'un fichier réel
+const uploadResult = await baas.storage.upload(file, {
+  folder: 'covers',
+  customName: 'cover_ngul_01.jpg',
+});
+
+console.log('URL Publique :', uploadResult.url);
+console.log('Taille :', uploadResult.size);
+```
+
+---
+
+## 🔔 Notifications Push
+
+```typescript
+// Enregistrer le token de notification de l'appareil
+await baas.notifications.registerDevice({
+  token: 'fcm_token_device_xyz...',
+  platform: 'web', // 'web' | 'android' | 'ios'
 });
 ```
 
 ---
 
-### 📦 Écritures Batch Transactionnelles
+## 💳 Module Paiements, Liens Hosted Checkout & Webhooks
 
-Exécutez plusieurs opérations en une seule requête atomique :
+Le module de paiement BaaS permet de générer des **liens de paiement hébergés uniques (`checkout_url`)** avec sélection multi-passerelles (Orange Money, MTN MoMo, Carte Bancaire, PayPal, Express Union), redirection automatique vers `success_url`/`fail_url` et notification instantanée vers `notify_url` (IPN Webhook signé).
 
-```javascript
-const batch = db.batch();
+> 💡 **Configuration Générale du Projet :**  
+> Depuis la console BaaS (**Paiements & Passerelles**), vous pouvez activer/désactiver les moyens de paiement et définir des URLs par défaut (`notify_url`, `success_url`, `fail_url`). Si vous les fournissez dans la requête, elles écrasent les valeurs par défaut.
 
-batch.set(db.collection('orders').doc('ord_101'), { total: 15000, status: 'paid' });
-batch.update(db.collection('books').doc('book_001'), { $inc: { sales_count: 1 } });
-batch.delete(db.collection('cart').doc('cart_user_45'));
+### 1. Créer une Session de Paiement Hébergée (Lien Unique de Redirection)
 
-const result = await batch.commit();
-console.log('Batch exécuté avec succès:', result);
-```
-
----
-
-## ☁️ Cloud Storage (Fichiers & Médias)
-
-Téléversez directement photos, vidéos, documents PDF et fichiers audio avec génération d'URLs sécurisées :
-
-```javascript
-const fileInput = document.querySelector('input[type="file"]');
-const file = fileInput.files[0];
-
-// Téléversement d'un document PDF ou d'une image
-const uploadRes = await storage.upload('books/covers/cover_001.jpg', file, {
-  onProgress: (percent) => console.log(`Téléversement: ${percent}%`)
-});
-console.log('URL publique CDN:', uploadRes.url);
-
-// Obtenir une URL signée temporaire (ex: pour fichier PDF sécurisé)
-const signedUrl = await storage.getSignedUrl('books/files/secure_book.pdf', 120); // Valide 120 minutes
-console.log('Lien de lecture temporaire:', signedUrl);
-```
-
----
-
-## 🔔 Push Notifications (FCM)
-
-```javascript
-// 1. Enregistrer le token de l'appareil
-await notifications.registerDeviceToken(
-  'fcm_token_device_abc123',
-  'web',
-  ['nouveautes', 'auteurs', 'promotions']
-);
-
-// 2. Envoyer une notification push ciblée (ou par topic)
-await notifications.send({
-  topic: 'nouveautes',
-  title: '📖 Nouveau Livre Disponible !',
-  body: 'Découvrez la suite exclusive de NGÙL LEKAN disponible sur OCaLi.',
-  data: { book_id: '6', action: 'open_book' }
-});
-```
-
----
-
-## 💳 Paiements & Retraits Mobile Money
-
-Module tout-en-un pour encaisser et reverser des fonds via **Orange Money**, **MTN Mobile Money** et **Cartes bancaires** :
-
-```javascript
-// 1. Encaisser un paiement (PayIn)
-const payin = await payments.initiatePayin({
-  amount: 2500,
+```typescript
+// Générer un lien de paiement hébergé avec sélection des passerelles et URLs de retour
+const session = await baas.payments.createCheckoutSession({
+  amount: 5000,
   currency: 'XAF',
-  phoneNumber: '699000000',
-  method: 'orange_money', // 'mtn_momo' | 'orange_money' | 'card'
-  description: 'Abonnement Lecteur Mensuel OCaLi'
+  customerName: 'Jean Dupont',
+  customerEmail: 'jean.dupont@example.com',
+  phone: '697336094',
+  description: 'Abonnement Mensuel CamSchool',
+  // URLs spécifiques (écrasent les paramètres par défaut du projet)
+  notifyUrl: 'https://monsite.com/api/payment/webhook',
+  successUrl: 'https://monsite.com/commande/succes',
+  failUrl: 'https://monsite.com/commande/annulee',
+  // Filtrer les moyens de paiement autorisés pour cette transaction (optionnel)
+  allowedMethods: ['ORANGE_MONEY', 'MTN_MOMO', 'CARD'],
+  metadata: { orderId: 'CMD_9941', userId: 'usr_8471' },
 });
-console.log('Paiement initié, transaction_id:', payin.transaction_id);
 
-// 2. Vérifier le statut de la transaction
-const status = await payments.getStatus(payin.transaction_id);
-console.log('Statut actuel:', status.status); // 'pending' | 'success' | 'failed'
+console.log('Lien de paiement unique généré :', session.checkout_url);
+console.log('Référence transaction :', session.reference);
 
-// 3. Effectuer un retrait / virement à un auteur (PayOut)
-const payout = await payments.initiatePayout({
-  amount: 15000,
-  phoneNumber: '677000000',
-  method: 'mtn_momo',
-  description: 'Retrait de royalties auteur'
-});
-console.log('Retrait en cours:', payout.transaction_id);
+// Rediriger le client vers la page de paiement sécurisée :
+window.location.href = session.checkout_url;
 ```
 
 ---
 
-## 🛡️ Gestion des Erreurs
+### 2. Réception du Webhook IPN (`notify_url`) dans votre Backend
 
-Toutes les erreurs lancées par le SDK héritent de la classe `BaasError` :
+Lorsque le client finalise son paiement sur la page hébergée, CamSchool BaaS envoie une requête `POST` à votre `notify_url` contenant les données de transaction et un header de signature HMAC SHA256 `X-Baas-Signature`.
 
-```javascript
-import { BaasAuthError, BaasPermissionError, BaasNotFoundError } from 'camschool-baas';
+#### Exemple de réception en Node.js / Express :
+```typescript
+import express from 'express';
+import crypto from 'crypto';
 
-try {
-  await db.collection('confidential').doc('secret_1').get();
-} catch (error) {
-  if (error instanceof BaasPermissionError) {
-    console.error('Accès refusé par les règles de sécurité:', error.message);
-  } else if (error instanceof BaasNotFoundError) {
-    console.error('Document inexistant.');
-  } else {
-    console.error('Erreur BaaS:', error.status, error.message);
+const app = express();
+app.use(express.json());
+
+app.post('/api/payment/webhook', (req, res) => {
+  const signature = req.headers['x-baas-signature'] as string;
+  const appSecret = 'VOTRE_APP_SECRET_OU_CLE_SECRETE';
+
+  // Vérifier la signature HMAC SHA256
+  const expectedSignature = crypto
+    .createHmac('sha256', appSecret)
+    .update(JSON.stringify(req.body))
+    .digest('hex');
+
+  if (signature !== expectedSignature) {
+    return res.status(401).json({ error: 'Signature invalide' });
   }
-}
+
+  const { event, reference, status, gross_amount, customer_name, metadata } = req.body;
+
+  if (event === 'payment.success') {
+    console.log(`✅ Paiement validé pour la commande ${metadata.orderId} : ${gross_amount} XAF`);
+    // Livrer le produit / activer l'abonnement
+  }
+
+  return res.json({ received: true });
+});
 ```
 
 ---
 
-## 📄 Licence
+### 3. Initier un Paiement Direct en API (PayIn)
 
-Distribué sous licence **MIT**. Développé avec passion pour l'écosystème africain et international par **CamSchool Tech**.
+```typescript
+// Paiement direct sans page de redirection
+const payin = await baas.payments.initiatePayin({
+  amount: 3000,
+  paymentMethod: 'orange_money', // 'orange_money' | 'mtn_momo' | 'PayPal' | 'card'
+  phone: '697336094',
+  customerName: 'Kengne BOPDA',
+  description: 'Achat de NGÙL LEKAN',
+});
+console.log('Transaction initiée :', payin.transaction_id);
+```
+
+---
+
+### 4. Initier une Demande de Retrait (PayOut - 0% Frais)
+
+```typescript
+// Retrait vers un compte Orange Money ou MTN MoMo
+const payout = await baas.payments.initiatePayout({
+  amount: 25000,
+  paymentMethod: 'orange_money',
+  phone: '697336094',
+  beneficiaryName: 'Auteur BDSTARS',
+  description: 'Retrait des gains',
+});
+console.log('Retrait enregistré :', payout.payout_id);
+```
+
+---
+
+### 5. Suivi en Direct d'une Transaction (Polling)
+
+```typescript
+// Écoute en temps réel jusqu'à confirmation
+const validatedTx = await baas.payments.pollTransaction(session.reference, {
+  intervalMs: 2500,
+  onUpdate: (tx) => console.log('Statut actuel :', tx.status),
+});
+console.log('Paiement confirmé avec succès !', validatedTx);
+```
+
+---
+
+## 🛡️ Sécurité & Bonnes Pratiques
+
+* 🔑 **Clé Publique (`pk_live_...`)** : À intégrer dans vos clients web/mobiles. Les autorisations sont régies par les règles de sécurité NoSQL de votre projet.
+* 🔒 **Clé Secrète (`sk_live_...`)** : **Uniquement pour les environnements serveurs / backends**. Ne jamais exposer dans un code JavaScript client !
+
+---
+
+## 📄 Licence & Support
+
+* **Licence** : [MIT](LICENSE)
+* **Dépôt GitHub** : [https://github.com/etienne500/camschool_baas_js](https://github.com/etienne500/camschool_baas_js)
+* **Console BaaS** : [https://camschool.kmrshop.com/baas](https://camschool.kmrshop.com/baas)

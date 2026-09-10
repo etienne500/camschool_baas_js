@@ -76,6 +76,49 @@ export class BaasAuth {
     return data;
   }
 
+    public async signUpWithPhone(
+    phoneNumber: string,
+    password: string,
+    displayName?: string,
+    metadata?: Record<string, any>
+  ): Promise<BaasAuthResponse> {
+    const res = await this.client.request('POST', 'auth/phone/register', {
+      body: {
+        phone_number: phoneNumber,
+        password,
+        display_name: displayName,
+        metadata,
+      },
+    });
+
+    const data = res.data || {};
+    if (data.token) {
+      this.client.setAuthToken(data.token);
+    }
+
+    this.currentUser = data.user || data;
+    this.notifyListeners();
+    return data;
+  }
+
+  public async signInWithPhone(phoneNumber: string, password: string): Promise<BaasAuthResponse> {
+    const res = await this.client.request('POST', 'auth/phone/login', {
+      body: {
+        phone_number: phoneNumber,
+        password,
+      },
+    });
+
+    const data = res.data || {};
+    if (data.token) {
+      this.client.setAuthToken(data.token);
+    }
+
+    this.currentUser = data.user || data;
+    this.notifyListeners();
+    return data;
+  }
+
   public async sendPhoneOtp(phoneNumber: string): Promise<{ otp_token: string; message: string }> {
     const res = await this.client.request('POST', 'auth/otp/send', {
       body: { phone_number: phoneNumber },
