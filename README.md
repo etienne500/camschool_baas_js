@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **SDK Universel Client & Backend pour CamSchool BaaS.**  
-> Alternative puissante, moderne et souveraine à Firebase / Supabase avec support natif du NoSQL Firestore-like, de l'Auth multi-canal (Email, Téléphone avec mot de passe ou SMS OTP, Anonyme), du Cloud Storage, des Push Notifications et des **Paiements & Retraits universels (`orange_money`, `mtn_momo`, `PayPal`, `card`)**.
+> Alternative puissante, moderne et souveraine à Firebase / Supabase avec support natif du NoSQL Firestore-like, de l'Auth multi-canal (Email, Téléphone avec mot de passe ou SMS OTP, Anonyme), du Cloud Storage, des Push Notifications et des **Paiements Hosted Checkout multi-passerelles (`orange_money`, `mtn_momo`, `PayPal`, `card`)**. *(Les retraits de fonds s'effectuent directement depuis le tableau de bord utilisateur de la plateforme).*
 
 ---
 
@@ -19,7 +19,7 @@
 5. [🗄️ Base de Données NoSQL (Query Builder Avancé)](#️-base-de-données-nosql)
 6. [☁️ Cloud Storage (Fichiers, Médias)](#️-cloud-storage)
 7. [🔔 Notifications Push](#-notifications-push)
-8. [💳 Module Paiements & Retraits (`orange_money`, `mtn_momo`, `PayPal`, `card`)](#-module-paiements--retraits)
+8. [💳 Module Paiements Hosted Checkout & Webhooks](#-module-paiements-liens-hosted-checkout--webhooks)
 9. [🛡️ Sécurité & Bonnes Pratiques](#️-sécurité--bonnes-pratiques)
 10. [📄 Licence & Support](#-licence--support)
 
@@ -42,10 +42,10 @@
   * Upload d'images, vidéos, documents PDF avec URLs CDN sécurisées.
 * 🔔 **Notifications Push** :
   * Enregistrement en direct des tokens FCM / WebPush.
-* 💳 **Paiements & Retraits Universels (BaaS Pay)** :
+* 💳 **Paiements Hosted Checkout Multi-Passerelles (BaaS Pay)** :
   * Moyens de paiement supportés : **`'orange_money'`**, **`'mtn_momo'`**, **`'PayPal'`**, **`'card'`** (Visa/Mastercard).
-  * Encaissements (PayIn) et Retraits automatiques (PayOut).
-  * Widgets UI intégrables en 1 ligne ou API programmatique complète.
+  * Génération de liens uniques sécurisés (`checkout_url`) et notification IPN Webhook avec signature HMAC.
+  * *Note : Les retraits de solde sont gérés de manière sécurisée et exclusive depuis le tableau de bord utilisateur de la plateforme.*
 
 ---
 
@@ -252,7 +252,7 @@ const session = await baas.payments.createCheckoutSession({
   successUrl: 'https://monsite.com/commande/succes',
   failUrl: 'https://monsite.com/commande/annulee',
   // Filtrer les moyens de paiement autorisés pour cette transaction (optionnel)
-  allowedMethods: ['ORANGE_MONEY', 'MTN_MOMO', 'CARD'],
+  allowedMethods: ['ORANGE_MONEY', 'MTN_MOMO', 'CARD', 'PAYPAL'],
   metadata: { orderId: 'CMD_9941', userId: 'usr_8471' },
 });
 
@@ -304,39 +304,7 @@ app.post('/api/payment/webhook', (req, res) => {
 
 ---
 
-### 3. Initier un Paiement Direct en API (PayIn)
-
-```typescript
-// Paiement direct sans page de redirection
-const payin = await baas.payments.initiatePayin({
-  amount: 3000,
-  paymentMethod: 'orange_money', // 'orange_money' | 'mtn_momo' | 'PayPal' | 'card'
-  phone: '697336094',
-  customerName: 'Kengne BOPDA',
-  description: 'Achat de NGÙL LEKAN',
-});
-console.log('Transaction initiée :', payin.transaction_id);
-```
-
----
-
-### 4. Initier une Demande de Retrait (PayOut - 0% Frais)
-
-```typescript
-// Retrait vers un compte Orange Money ou MTN MoMo
-const payout = await baas.payments.initiatePayout({
-  amount: 25000,
-  paymentMethod: 'orange_money',
-  phone: '697336094',
-  beneficiaryName: 'Auteur BDSTARS',
-  description: 'Retrait des gains',
-});
-console.log('Retrait enregistré :', payout.payout_id);
-```
-
----
-
-### 5. Suivi en Direct d'une Transaction (Polling)
+### 3. Suivi en Direct d'une Transaction (Polling)
 
 ```typescript
 // Écoute en temps réel jusqu'à confirmation

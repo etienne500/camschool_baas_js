@@ -67,33 +67,6 @@ export interface PayinResult {
   created_at: string;
 }
 
-export interface PayoutOptions {
-  amount: number;
-  paymentMethod: 'MTN_MOMO' | 'ORANGE_MONEY' | 'EU_MOBILE' | string;
-  phone: string;
-  beneficiaryName?: string;
-  description?: string;
-  currency?: string;
-  callbackUrl?: string;
-  metadata?: Record<string, any>;
-}
-
-export interface PayoutResult {
-  success: boolean;
-  payout_id: number | string;
-  reference: string;
-  status: string;
-  gross_amount: number;
-  fee_rate: number;
-  fee_amount: number;
-  net_amount: number;
-  currency: string;
-  payment_method: string;
-  phone?: string;
-  message: string;
-  created_at: string;
-}
-
 export interface CheckoutSessionOptions {
   amount: number;
   currency?: string;
@@ -132,7 +105,7 @@ export class BaasPayments {
   constructor(private client: BaaS) {}
 
   /**
-   * Récupérer les moyens de paiement disponibles et leurs frais (7% PayIn / 0% PayOut)
+   * Récupérer les moyens de paiement disponibles et leurs frais
    */
   async getPaymentMethods(): Promise<BaasPaymentMethod[]> {
     const res = await this.client.request<{ data: BaasPaymentMethod[] }>('GET', 'payments/methods');
@@ -141,7 +114,7 @@ export class BaasPayments {
 
   /**
    * Créer une session de paiement hébergée (Hosted Checkout Link)
-   * Retourne une URL unique vers laquelle rediriger l'utilisateur.
+   * Retourne une URL unique (checkout_url) vers laquelle rediriger l'utilisateur.
    * À la fin du paiement, CamSchool BaaS envoie les données vers notify_url (IPN webhook)
    * et redirige le client vers success_url ou fail_url.
    */
@@ -149,7 +122,7 @@ export class BaasPayments {
     const res = await this.client.request<CheckoutSessionResult>('POST', 'payments/checkout', {
       amount: options.amount,
       currency: options.currency || 'XAF',
-      allowed_methods: options.allowedMethods,
+      allowed_methods: options.allowedMethods || ['ORANGE_MONEY', 'MTN_MOMO', 'CARD', 'PAYPAL'],
       customer_name: options.customerName,
       customer_email: options.customerEmail,
       phone: options.phone,
@@ -163,39 +136,21 @@ export class BaasPayments {
   }
 
   /**
-   * Initier un paiement / encaissement (PayIn) - Commission 7%
+   * @deprecated Utilisez createCheckoutSession() pour générer une URL de paiement sécurisée (checkout_url).
    */
-  async initiatePayin(options: PayinOptions): Promise<PayinResult> {
-    const res = await this.client.request<{ success: boolean; data: PayinResult }>('POST', 'payments/payin', {
+  async initiatePayin(options: PayinOptions): Promise<CheckoutSessionResult> {
+    return this.createCheckoutSession({
       amount: options.amount,
-      payment_method: options.paymentMethod,
+      currency: options.currency,
+      customerName: options.customerName,
+      customerEmail: options.customerEmail,
       phone: options.phone,
-      customer_name: options.customerName,
-      customer_email: options.customerEmail,
       description: options.description,
-      currency: options.currency || 'XAF',
-      callback_url: options.callbackUrl,
-      return_url: options.returnUrl,
+      callbackUrl: options.callbackUrl,
+      returnUrl: options.returnUrl,
       metadata: options.metadata,
+      allowedMethods: options.paymentMethod ? [options.paymentMethod.toUpperCase()] : ['ORANGE_MONEY', 'MTN_MOMO', 'CARD', 'PAYPAL'],
     });
-    return res.data;
-  }
-
-  /**
-   * Initier un retrait / décaissement (PayOut) - Commission 0% (Gratuit)
-   */
-  async initiatePayout(options: PayoutOptions): Promise<PayoutResult> {
-    const res = await this.client.request<{ success: boolean; data: PayoutResult }>('POST', 'payments/payout', {
-      amount: options.amount,
-      payment_method: options.paymentMethod,
-      phone: options.phone,
-      beneficiary_name: options.beneficiaryName,
-      description: options.description,
-      currency: options.currency || 'XAF',
-      callback_url: options.callbackUrl,
-      metadata: options.metadata,
-    });
-    return res.data;
   }
 
   /**
