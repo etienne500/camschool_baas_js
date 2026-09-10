@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **SDK Universel Client & Backend pour CamSchool BaaS.**  
-> Alternative puissante, moderne et souveraine à Firebase / Supabase avec support natif du NoSQL Firestore-like, de l'Auth multi-canal (Email, Téléphone avec mot de passe ou SMS OTP, Anonyme), du Cloud Storage, des Push Notifications et des **Paiements Hosted Checkout multi-passerelles (`orange_money`, `mtn_momo`, `PayPal`, `card`)**. *(Les retraits de fonds s'effectuent directement depuis le tableau de bord utilisateur de la plateforme).*
+> Alternative puissante, moderne et souveraine à Firebase / Supabase avec support natif du NoSQL Firestore-like, de l'Auth multi-canal (Email, Téléphone avec mot de passe ou SMS OTP, Anonyme), du Cloud Storage, des Push Notifications et des **Paiements Hosted Checkout multi-passerelles (`orange_money`, `mtn_momo`, `PayPal`, `card`)**. *(Les retraits de fonds s'effectuent directement depuis le tableau de bord développeur et sont traités sous un délai de 3 jours par un administrateur).*
 
 ---
 
@@ -45,7 +45,7 @@
 * 💳 **Paiements Hosted Checkout Multi-Passerelles (BaaS Pay)** :
   * Moyens de paiement supportés : **`'orange_money'`**, **`'mtn_momo'`**, **`'PayPal'`**, **`'card'`** (Visa/Mastercard).
   * Génération de liens uniques sécurisés (`checkout_url`) et notification IPN Webhook avec signature HMAC.
-  * *Note : Les retraits de solde sont gérés de manière sécurisée et exclusive depuis le tableau de bord utilisateur de la plateforme.*
+  * *Note : Les retraits de solde sont initiés depuis le tableau de bord développeur et traités sous un délai de 3 jours par un administrateur.*
 
 ---
 
