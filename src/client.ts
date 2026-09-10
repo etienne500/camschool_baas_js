@@ -4,6 +4,7 @@ import { BaasDatabase, BaasCollectionReference } from './database';
 import { BaasStorage } from './storage';
 import { BaasPayments } from './payments';
 import { BaasNotifications } from './notifications';
+import { BaasSms, BaasMail, BaasMessaging } from './messaging';
 import {
   BaasError,
   BaasAuthError,
@@ -25,6 +26,9 @@ export class BaasClient {
   public storage: BaasStorage;
   public payments: BaasPayments;
   public notifications: BaasNotifications;
+  public sms: BaasSms;
+  public mail: BaasMail;
+  public messaging: BaasMessaging;
 
   constructor(config: BaasConfig) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, '');
@@ -39,6 +43,9 @@ export class BaasClient {
     this.storage = new BaasStorage(this);
     this.payments = new BaasPayments(this);
     this.notifications = new BaasNotifications(this);
+    this.sms = new BaasSms(this);
+    this.mail = new BaasMail(this);
+    this.messaging = new BaasMessaging(this);
 
     // Auto-restore session from localStorage if in browser environment
     if (config.autoRestoreSession !== false && typeof window !== 'undefined' && window.localStorage) {

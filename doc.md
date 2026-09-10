@@ -1,4 +1,4 @@
-﻿# 🌐 CamSchool BaaS — Guide Complet & Documentation Officielle du SDK JavaScript / TypeScript
+# 🌐 CamSchool BaaS — Guide Complet & Documentation Officielle du SDK JavaScript / TypeScript
 
 > **Package :** `@camschool/baas-js`  
 > **Version :** `1.0.0`  
@@ -403,8 +403,49 @@ export default function CoursesList() {
 
 ---
 
+## 8. 💬 Messagerie SMS & Emails
+
+### 8.1 Envoi de SMS (Facturation : 25 FCFA / SMS)
+
+Le module SMS permet de notifier instantanément vos utilisateurs par SMS direct au Cameroun et à l'international.
+
+```typescript
+// Envoi simple d'un SMS (25 FCFA)
+const sms = await baas.sms.send({
+  to: '+237655797860',
+  message: 'Votre code de confirmation est 894321.',
+  senderId: 'CamSchool',
+});
+
+console.log('Résultat :', sms.success);
+console.log('Coût :', sms.total_cost, 'FCFA');
+
+// Envoi groupé (Bulk SMS)
+const bulk = await baas.sms.sendBulk(
+  ['+237655797860', '+237697336094'],
+  'Rappel : Réunion des parents demain à 14h00.'
+);
+console.log('Envoyés :', bulk.sent_count, 'Total coût :', bulk.total_cost, 'FCFA');
+```
+
+### 8.2 Envoi d'Emails Transactionnels
+
+```typescript
+// Envoi d'un email avec modèle HTML
+await baas.mail.send({
+  to: 'parent@camschool.cm',
+  subject: 'Bulletin scolaire du 1er trimestre',
+  html: '<h1>Bulletin disponible</h1><p>Le bulletin de votre enfant est disponible en téléchargement.</p>',
+  fromName: 'Secrétariat CamSchool',
+  replyTo: 'contact@camschool.cm',
+});
+```
+
+---
+
 ## 10. 🏆 Bonnes Pratiques & Sécurité
 
 1. **Clé API Publique (`apiKey`)** : Vous pouvez exposer sans risque votre `apiKey` publique dans votre frontend JavaScript.
 2. **Ne jamais exposer la `secret_key`** dans un environnement client/navigateur. Réservez la `secret_key` à vos scripts serveurs ou cron jobs backend.
 3. **Configurez vos `Security Rules`** dans l'espace d'administration CamSchool BaaS pour sécuriser les accès par utilisateur (`auth.id == doc.user_id`).
+

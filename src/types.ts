@@ -1,4 +1,4 @@
-﻿export interface BaasConfig {
+export interface BaasConfig {
   baseUrl: string;
   projectId: string;
   apiKey: string;
@@ -75,4 +75,69 @@ export interface BatchOperation {
   document_id: string;
   data?: Record<string, any>;
   merge?: boolean;
+}
+
+export interface SendSmsOptions {
+  to?: string | string[];
+  phone?: string | string[];
+  recipients?: string | string[];
+  message?: string;
+  body?: string;
+  text?: string;
+  senderId?: string;
+  sender_id?: string;
+  options?: Record<string, any>;
+}
+
+export interface SmsSendDetail {
+  to: string;
+  status: 'sent' | 'failed';
+  message_id?: string | null;
+  cost: number;
+  error?: string | null;
+}
+
+export interface SendSmsResult {
+  success: boolean;
+  count: number;
+  sent_count: number;
+  failed_count: number;
+  price_per_sms: number;
+  total_cost: number;
+  currency: string;
+  details: SmsSendDetail[];
+}
+
+export interface SendEmailOptions {
+  to?: string | string[];
+  email?: string | string[];
+  recipients?: string | string[];
+  subject: string;
+  body?: string;
+  html?: string;
+  content?: string;
+  message?: string;
+  fromName?: string;
+  from_name?: string;
+  fromEmail?: string;
+  from_email?: string;
+  replyTo?: string;
+  reply_to?: string;
+  cc?: string | string[];
+  bcc?: string | string[];
+}
+
+export interface EmailSendDetail {
+  to: string;
+  status: 'sent' | 'failed';
+  error?: string | null;
+}
+
+export interface SendEmailResult {
+  success: boolean;
+  count: number;
+  sent_count: number;
+  failed_count: number;
+  subject: string;
+  details: EmailSendDetail[];
 }

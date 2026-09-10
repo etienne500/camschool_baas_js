@@ -19,9 +19,10 @@
 5. [🗄️ Base de Données NoSQL (Query Builder Avancé)](#️-base-de-données-nosql)
 6. [☁️ Cloud Storage (Fichiers, Médias)](#️-cloud-storage)
 7. [🔔 Notifications Push](#-notifications-push)
-8. [💳 Module Paiements Hosted Checkout & Webhooks](#-module-paiements-liens-hosted-checkout--webhooks)
-9. [🛡️ Sécurité & Bonnes Pratiques](#️-sécurité--bonnes-pratiques)
-10. [📄 Licence & Support](#-licence--support)
+8. [💬 Envoi de SMS & Emails (Messagerie)](#-envoi-de-sms--emails-messagerie)
+9. [💳 Module Paiements Hosted Checkout & Webhooks](#-module-paiements-liens-hosted-checkout--webhooks)
+10. [🛡️ Sécurité & Bonnes Pratiques](#️-sécurité--bonnes-pratiques)
+11. [📄 Licence & Support](#-licence--support)
 
 ---
 
@@ -42,6 +43,10 @@
   * Upload d'images, vidéos, documents PDF avec URLs CDN sécurisées.
 * 🔔 **Notifications Push** :
   * Enregistrement en direct des tokens FCM / WebPush.
+* 💬 **Messagerie SMS & Emails Transactionnels** :
+  * Envoi de **SMS professionnels facturés à 25 FCFA / SMS** (envois uniques ou en masse / bulk).
+  * Envoi d'**Emails transactionnels HTML ou texte brut** avec expéditeur personnalisé, Reply-To, CC et BCC.
+  * Suivi complet et journalisation en temps réel des messages envoyés.
 * 💳 **Paiements Hosted Checkout Multi-Passerelles (BaaS Pay)** :
   * Moyens de paiement supportés : **`'orange_money'`**, **`'mtn_momo'`**, **`'PayPal'`**, **`'card'`** (Visa/Mastercard).
   * Génération de liens uniques sécurisés (`checkout_url`) et notification IPN Webhook avec signature HMAC.
@@ -225,6 +230,59 @@ await baas.notifications.registerDevice({
   token: 'fcm_token_device_xyz...',
   platform: 'web', // 'web' | 'android' | 'ios'
 });
+```
+
+---
+
+## 💬 Envoi de SMS & Emails (Messagerie)
+
+CamSchool BaaS inclut un module complet d'envoi de messages transactionnels et alertes à vos utilisateurs.
+
+> 💰 **Tarification SMS :** Les SMS envoyés sont facturés à **25 FCFA (25 frs) par SMS**. Le coût est automatiquement calculé et tracé sur votre projet.
+
+### 1. Envoi de SMS (Unitaire ou en Masse)
+
+```typescript
+// Envoi d'un SMS unitaire (Coût : 25 FCFA)
+const smsResult = await baas.sms.send({
+  to: '+237655797860',
+  message: 'Bonjour ! Votre commande #CMD_9872 est validée et en cours d’expédition.',
+  senderId: 'CamSchool', // Optionnel (jusqu'à 11 caractères)
+});
+
+console.log('Statut SMS :', smsResult.success);
+console.log('Coût total débité :', smsResult.total_cost, smsResult.currency); // 25 XAF
+
+// Envoi groupé / Bulk SMS (Coût : 25 FCFA x nombre de destinataires)
+const bulkResult = await baas.sms.sendBulk(
+  ['+237655797860', '+237697336094', '+237670000000'],
+  'Offre spéciale : -30% sur tous les cours cette semaine !'
+);
+
+console.log('SMS envoyés avec succès :', bulkResult.sent_count);
+console.log('Coût total :', bulkResult.total_cost, 'FCFA'); // 75 XAF
+```
+
+### 2. Envoi d'Emails (HTML & Texte Brut)
+
+```typescript
+// Envoi d'un Email transactionnel riche en HTML
+const mailResult = await baas.mail.send({
+  to: 'client@example.com',
+  subject: 'Confirmation de votre abonnement CamSchool',
+  html: `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #10b981;">Bienvenue dans la communauté !</h2>
+      <p>Votre abonnement a bien été activé.</p>
+      <a href="https://monsite.com/dashboard" style="background:#10b981; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">Accéder à mon espace</a>
+    </div>
+  `,
+  fromName: 'Service Client CamSchool',
+  replyTo: 'support@camschool.cm',
+  cc: ['manager@example.com'],
+});
+
+console.log('Email envoyé avec succès :', mailResult.success);
 ```
 
 ---
