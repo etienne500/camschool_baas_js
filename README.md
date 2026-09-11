@@ -238,12 +238,12 @@ await baas.notifications.registerDevice({
 
 CamSchool BaaS inclut un module complet d'envoi de messages transactionnels et alertes à vos utilisateurs.
 
-> 💰 **Tarification SMS :** Les SMS envoyés sont facturés à **25 FCFA (25 frs) par SMS**. Le coût est automatiquement calculé et tracé sur votre projet.
+> 💰 **Tarification SMS :** Les SMS envoyés sont facturés à **25 FCFA (25 frs) par SMS**. Le montant est automatiquement débité et journalisé sur votre projet.
 
 ### 1. Envoi de SMS (Unitaire ou en Masse)
 
 ```typescript
-// Envoi d'un SMS unitaire (Coût : 25 FCFA)
+// Envoi d'un SMS unitaire (Coût : 25 FCFA / SMS)
 const smsResult = await baas.sms.send({
   to: '+237655797860',
   message: 'Bonjour ! Votre commande #CMD_9872 est validée et en cours d’expédition.',
@@ -260,7 +260,7 @@ const bulkResult = await baas.sms.sendBulk(
 );
 
 console.log('SMS envoyés avec succès :', bulkResult.sent_count);
-console.log('Coût total :', bulkResult.total_cost, 'FCFA'); // 75 XAF
+console.log('Coût total :', bulkResult.total_cost, 'FCFA'); // 75 XAF (3 x 25 FCFA)
 ```
 
 ### 2. Envoi d'Emails (HTML & Texte Brut)
@@ -287,14 +287,27 @@ console.log('Email envoyé avec succès :', mailResult.success);
 
 ---
 
-## 💳 Module Paiements, Liens Hosted Checkout & Webhooks
+## 💳 Module Paiements, Liens Hosted Checkout & Passerelles (PayMooney & NoKash)
 
-Le module de paiement BaaS permet de générer des **liens de paiement hébergés uniques (`checkout_url`)** avec sélection multi-passerelles (Orange Money, MTN MoMo, Carte Bancaire, PayPal, Express Union), redirection automatique vers `success_url`/`fail_url` et notification instantanée vers `notify_url` (IPN Webhook signé).
+Le module de paiement BaaS permet de générer des **liens de paiement hébergés uniques (`checkout_url`)** supportant les passerelles de premier ordre :
+* 📱 **Orange Money** (`'ORANGE_MONEY'`) via **PayMooney** ou **NoKash**
+* 📱 **MTN Mobile Money** (`'MTN_MOMO'`) via **PayMooney** ou **NoKash**
+* 🌐 **PayPal** (`'PAYPAL'`) via **PayMooney**
+* 💳 **Cartes Bancaires Visa & Mastercard** (`'CARD'`) via **PayMooney**
+* 💼 **Express Union Mobile** (`'EU_MOBILE'`) via **NoKash**
 
-> 💡 **Configuration Générale du Projet :**  
-> Depuis la console BaaS (**Paiements & Passerelles**), vous pouvez activer/désactiver les moyens de paiement et définir des URLs par défaut (`notify_url`, `success_url`, `fail_url`). Si vous les fournissez dans la requête, elles écrasent les valeurs par défaut.
+> 📊 **Calcul Dynamique des Frais par Tranches de Montant :**  
+> Les administrateurs peuvent configurer pour chaque moyen de paiement des **tranches de montants** personnalisées (ex: 0 à 2 500 FCFA à 3%, 2 501 à 10 000 FCFA à 3%, 10 001 à 50 000 FCFA à 2.5%, > 50 000 FCFA à 2%). Les frais sont automatiquement appliqués et détaillés lors de l'encaissement.
 
-### 1. Créer une Session de Paiement Hébergée (Lien Unique de Redirection)
+### 1. Consulter les Moyens de Paiement et Grilles Tarifaires Actives
+
+```typescript
+const methods = await baas.payments.getMethods();
+console.log('Moyens disponibles :', methods.data);
+// Affiche la passerelle (PayMooney / NoKash), le tarif SMS (25 FCFA) et les tranches de frais
+```
+
+### 2. Créer une Session de Paiement Hébergée (Lien Unique de Redirection)
 
 ```typescript
 // Générer un lien de paiement hébergé avec sélection des passerelles et URLs de retour
@@ -323,9 +336,9 @@ window.location.href = session.checkout_url;
 
 ---
 
-### 2. Réception du Webhook IPN (`notify_url`) dans votre Backend
+### 3. Réception du Webhook IPN (`notify_url`) dans votre Backend
 
-Lorsque le client finalise son paiement sur la page hébergée, CamSchool BaaS envoie une requête `POST` à votre `notify_url` contenant les données de transaction et un header de signature HMAC SHA256 `X-Baas-Signature`.
+Lorsque le client finalise son paiement sur la page hébergée (ou via les passerelles PayMooney / NoKash), CamSchool BaaS envoie une requête `POST` à votre `notify_url` contenant les données de transaction et un header de signature HMAC SHA256 `X-Baas-Signature`.
 
 #### Exemple de réception en Node.js / Express :
 ```typescript
@@ -349,10 +362,10 @@ app.post('/api/payment/webhook', (req, res) => {
     return res.status(401).json({ error: 'Signature invalide' });
   }
 
-  const { event, reference, status, gross_amount, customer_name, metadata } = req.body;
+  const { event, reference, status, gross_amount, customer_name, metadata, fee_rate, net_amount } = req.body;
 
   if (event === 'payment.success') {
-    console.log(`✅ Paiement validé pour la commande ${metadata.orderId} : ${gross_amount} XAF`);
+    console.log(`✅ Paiement validé pour la commande ${metadata.orderId} : ${gross_amount} XAF (Net reçu : ${net_amount} XAF)`);
     // Livrer le produit / activer l'abonnement
   }
 
@@ -362,7 +375,7 @@ app.post('/api/payment/webhook', (req, res) => {
 
 ---
 
-### 3. Suivi en Direct d'une Transaction (Polling)
+### 4. Suivi en Direct d'une Transaction (Polling)
 
 ```typescript
 // Écoute en temps réel jusqu'à confirmation
