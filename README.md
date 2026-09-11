@@ -222,13 +222,156 @@ console.log('Taille :', uploadResult.size);
 
 ---
 
-## 🔔 Notifications Push
+## 🔔 Notifications Push (Web Push & FCM)
+
+CamSchool BaaS intègre un système unifié de **Notifications Push** basé sur Firebase Cloud Messaging (FCM) et le standard Web Push (VAPID), permettant de notifier instantanément vos utilisateurs sur navigateurs Web (Chrome, Firefox, Edge, Safari macOS/iOS) et applications mobiles.
+
+---
+
+### 1. Prérequis & Configuration Firebase Web
+
+Pour recevoir des notifications push dans une application Web :
+1. Créez un projet sur la [Console Firebase](https://console.firebase.google.com).
+2. Ajoutez une application **Web** (`</>`) et copiez la configuration `firebaseConfig`.
+3. Rendez-vous dans **Paramètres du projet > Cloud Messaging > Certificats Web Push** et générez une **Paire de clés VAPID** (ex: `BEl...pubKey`).
+4. Dans votre console CamSchool BaaS, renseignez votre clé serveur FCM / compte de service.
+
+---
+
+### 2. Mise en Place du Service Worker (`firebase-messaging-sw.js`)
+
+Créez un fichier nommé **`firebase-messaging-sw.js`** à la racine publique de votre site web (accessible via `https://votresite.com/firebase-messaging-sw.js`) :
+
+```javascript
+// firebase-messaging-sw.js (Placer à la racine /public)
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSy...",
+  authDomain: "mon-projet.firebaseapp.com",
+  projectId: "mon-projet",
+  storageBucket: "mon-projet.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef"
+});
+
+const messaging = firebase.messaging();
+
+// Gestion des notifications reçues en arrière-plan (quand l'onglet/navigateur est fermé)
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Notification reçue en arrière-plan :', payload);
+  
+  const notificationTitle = payload.notification?.title || payload.data?.title || 'CamSchool BaaS';
+  const notificationOptions = {
+    body: payload.notification?.body || payload.data?.body || '',
+    icon: payload.notification?.icon || '/icons/icon-192x192.png',
+    badge: '/icons/badge-72x72.png',
+    data: payload.data || {},
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+```
+
+---
+
+### 3. Initialisation Client & Enregistrement de l'Appareil
+
+Dans votre application Web (React, Vue, Angular, Svelte ou Vanilla JS) :
 
 ```typescript
-// Enregistrer le token de notification de l'appareil
-await baas.notifications.registerDevice({
-  token: 'fcm_token_device_xyz...',
-  platform: 'web', // 'web' | 'android' | 'ios'
+import { initializeApp } from 'firebase/app';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { CamSchoolBaaS } from 'camschool_baas_js';
+
+const baas = CamSchoolBaaS.init({
+  projectId: 'proj_zf3qirtdv4xc',
+  publicKey: 'pk_live_smULRpyZL00lxUVG97sZ9o0ruB9MxUw7UXg8GfTw',
+});
+
+// 1. Initialiser Firebase côté client
+const firebaseApp = initializeApp({
+  apiKey: "AIzaSy...",
+  projectId: "mon-projet",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef"
+});
+
+const messaging = getMessaging(firebaseApp);
+
+// 2. Demander la permission et enregistrer le token sur CamSchool BaaS
+async function setupPushNotifications() {
+  try {
+    // Demander la permission à l'utilisateur
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.warn('Permission de notification refusée par l\'utilisateur.');
+      return;
+    }
+
+    // Récupérer le token FCM Web Push (VAPID Key)
+    const currentToken = await getToken(messaging, {
+      vapidKey: 'VOTRE_CLE_PUBLIQUE_VAPID_DEPUIS_FIREBASE_CONSOLE'
+    });
+
+    if (currentToken) {
+      console.log('FCM Web Token obtenu :', currentToken);
+
+      // Enregistrer le token auprès de CamSchool BaaS
+      await baas.notifications.registerDevice({
+        token: currentToken,
+        platform: 'web', // 'web' | 'android' | 'ios'
+        topics: ['actualites', 'annonces_cours'],
+      });
+      console.log('Appareil enregistré avec succès sur CamSchool BaaS !');
+    }
+  } catch (err) {
+    console.error('Erreur lors de l\'activation des notifications :', err);
+  }
+}
+
+// 3. Écouter les notifications au premier plan (Foreground)
+onMessage(messaging, (payload) => {
+  console.log('Notification reçue au premier plan :', payload);
+  // Afficher un Toast / Banner in-app personnalisé
+  alert(`🔔 ${payload.notification?.title}\n${payload.notification?.body}`);
+});
+
+// Appeler la fonction au démarrage ou après connexion
+setupPushNotifications();
+```
+
+---
+
+### 4. Envoi de Notifications Push depuis le Backend / Node.js
+
+Envoyez des notifications ciblées via la clé secrète ou depuis vos fonctions Cloud / serveurs Node.js :
+
+```typescript
+// 1. Diffusion générale (Broadcast à tous les appareils du projet)
+await baas.notifications.send({
+  targetType: 'all',
+  title: 'Nouvelle mise à jour disponible !',
+  body: 'Découvrez la nouvelle interface de votre espace étudiant.',
+  data: { route: '/nouveautes', version: '2.0.0' },
+});
+
+// 2. Envoi ciblé à un utilisateur spécifique (par son ID utilisateur BaaS)
+await baas.notifications.send({
+  targetType: 'user',
+  target: 'usr_8471', // ID de l'utilisateur connecté
+  title: 'Votre devoir a été corrigé 📝',
+  body: 'Consultez la note et les commentaires de votre enseignant.',
+  data: { homeworkId: 'hw_992' },
+});
+
+// 3. Envoi sur un Topic thématique (Abonnés au sujet)
+await baas.notifications.send({
+  targetType: 'topic',
+  target: 'annonces_cours',
+  title: 'Cours en direct ce soir à 20h !',
+  body: 'Rejoignez la masterclass Flutter sur CamSchool.',
 });
 ```
 
