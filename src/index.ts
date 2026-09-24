@@ -20,4 +20,5 @@ export * from './messaging';
 export default createClient;
 
 export * from './payments';
+export * from './bills';
 export * from './widgets';

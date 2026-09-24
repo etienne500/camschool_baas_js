@@ -3,6 +3,7 @@ import { BaasAuth } from './auth';
 import { BaasDatabase, BaasCollectionReference } from './database';
 import { BaasStorage } from './storage';
 import { BaasPayments } from './payments';
+import { BaasBills } from './bills';
 import { BaasNotifications } from './notifications';
 import { BaasSms, BaasMail, BaasMessaging } from './messaging';
 import {
@@ -25,6 +26,7 @@ export class BaasClient {
   public database: BaasDatabase;
   public storage: BaasStorage;
   public payments: BaasPayments;
+  public bills: BaasBills;
   public notifications: BaasNotifications;
   public sms: BaasSms;
   public mail: BaasMail;
@@ -42,6 +44,7 @@ export class BaasClient {
     this.database = new BaasDatabase(this);
     this.storage = new BaasStorage(this);
     this.payments = new BaasPayments(this);
+    this.bills = new BaasBills(this);
     this.notifications = new BaasNotifications(this);
     this.sms = new BaasSms(this);
     this.mail = new BaasMail(this);

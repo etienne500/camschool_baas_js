@@ -21,8 +21,10 @@
 7. [🔔 Notifications Push](#-notifications-push)
 8. [💬 Envoi de SMS & Emails (Messagerie)](#-envoi-de-sms--emails-messagerie)
 9. [💳 Module Paiements Hosted Checkout & Webhooks](#-module-paiements-liens-hosted-checkout--webhooks)
-10. [🛡️ Sécurité & Bonnes Pratiques](#️-sécurité--bonnes-pratiques)
-11. [📄 Licence & Support](#-licence--support)
+10. [💡 Module Factures & Services Concessionnaires (ENEO, CamWater, Canal+, Airtime)](#-module-factures--services-concessionnaires)
+11. [📜 Historique des Transactions & Factures (Invoices)](#-module-factures--services-concessionnaires)
+12. [🛡️ Sécurité & Bonnes Pratiques](#️-sécurité--bonnes-pratiques)
+13. [📄 Licence & Support](#-licence--support)
 
 ---
 
@@ -186,6 +188,19 @@ const snapshot = await baas.database
   .get();
 
 console.log('Résultats trouvés :', snapshot.docs);
+```
+
+### 3. [V2] Filtrage des champs (Select) & Sync Différentiel
+
+L'API V2 permet de réduire la bande passante consommée (Zéro octet gaspillé) en utilisant la projection de champs et le cache ETag :
+
+```typescript
+// Récupérer uniquement les titres et les prix
+const snapshotOptimized = await baas.v2.database
+  .collection('livres')
+  .select(['titre', 'prix'])
+  .updatedAfter('2023-10-01T00:00:00Z') // Sync différentiel
+  .get();
 ```
 
 #### Opérateurs NoSQL Disponibles :
@@ -433,11 +448,14 @@ console.log('Email envoyé avec succès :', mailResult.success);
 ## 💳 Module Paiements, Liens Hosted Checkout & Passerelles (PayMooney & NoKash)
 
 Le module de paiement BaaS permet de générer des **liens de paiement hébergés uniques (`checkout_url`)** supportant les passerelles de premier ordre :
-* 📱 **Orange Money** (`'ORANGE_MONEY'`) via **PayMooney** ou **NoKash**
-* 📱 **MTN Mobile Money** (`'MTN_MOMO'`) via **PayMooney** ou **NoKash**
-* 🌐 **PayPal** (`'PAYPAL'`) via **PayMooney**
-* 💳 **Cartes Bancaires Visa & Mastercard** (`'CARD'`) via **PayMooney**
-* 💼 **Express Union Mobile** (`'EU_MOBILE'`) via **NoKash**
+* 📱 **Orange Money** (`'ORANGE_MONEY'`, `'ORANGE_MONEY_NOKASH'`) via **NoKash** ou **PayMooney** (Push USSD `#150*50#`)
+* 📱 **MTN Mobile Money** (`'MTN_MOMO'`, `'MTN_MOMO_NOKASH'`) via **NoKash** ou **PayMooney** (Push USSD `*126#`)
+* 💼 **Express Union Mobile** (`'EU_MOBILE'`, `'EU_MOBILE_NOKASH'`) via **NoKash**
+* 🌐 **PayPal** (`'PAYPAL'`, `'PAYPAL_PAYMOONEY'`) via **PayMooney**
+* 💳 **Cartes Bancaires Visa & Mastercard** (`'CARD'`, `'CARD_PAYMOONEY'`, `'CARD_NOKASH'`) via **PayMooney** ou **NoKash**
+
+> ⚡ **Passerelle NoKash Haute Performance :**  
+> Intégrée nativement au BaaS avec push USSD direct, vérification de statut en temps réel (`REQUEST_OK`, `PENDING`, `SUCCESS`) et reversements automatisés (Payouts).
 
 > 📊 **Calcul Dynamique des Frais par Tranches de Montant :**  
 > Les administrateurs peuvent configurer pour chaque moyen de paiement des **tranches de montants** personnalisées (ex: 0 à 2 500 FCFA à 3%, 2 501 à 10 000 FCFA à 3%, 10 001 à 50 000 FCFA à 2.5%, > 50 000 FCFA à 2%). Les frais sont automatiquement appliqués et détaillés lors de l'encaissement.
@@ -447,7 +465,7 @@ Le module de paiement BaaS permet de générer des **liens de paiement hébergé
 ```typescript
 const methods = await baas.payments.getMethods();
 console.log('Moyens disponibles :', methods.data);
-// Affiche la passerelle (PayMooney / NoKash), le tarif SMS (25 FCFA) et les tranches de frais
+// Affiche la passerelle (NoKash / PayMooney), le statut, le tarif SMS (25 FCFA) et les tranches de frais
 ```
 
 ### 2. Créer une Session de Paiement Hébergée (Lien Unique de Redirection)
@@ -466,7 +484,7 @@ const session = await baas.payments.createCheckoutSession({
   successUrl: 'https://monsite.com/commande/succes',
   failUrl: 'https://monsite.com/commande/annulee',
   // Filtrer les moyens de paiement autorisés pour cette transaction (optionnel)
-  allowedMethods: ['ORANGE_MONEY', 'MTN_MOMO', 'CARD', 'PAYPAL'],
+  allowedMethods: ['ORANGE_MONEY_NOKASH', 'MTN_MOMO_NOKASH', 'EU_MOBILE_NOKASH', 'CARD_PAYMOONEY'],
   metadata: { orderId: 'CMD_9941', userId: 'usr_8471' },
 });
 
@@ -481,7 +499,7 @@ window.location.href = session.checkout_url;
 
 ### 3. Réception du Webhook IPN (`notify_url`) dans votre Backend
 
-Lorsque le client finalise son paiement sur la page hébergée (ou via les passerelles PayMooney / NoKash), CamSchool BaaS envoie une requête `POST` à votre `notify_url` contenant les données de transaction et un header de signature HMAC SHA256 `X-Baas-Signature`.
+Lorsque le client finalise son paiement sur la page hébergée (ou via les passerelles NoKash / PayMooney), CamSchool BaaS envoie une requête `POST` à votre `notify_url` contenant les données de transaction et un header de signature HMAC SHA256 `X-Baas-Signature`.
 
 #### Exemple de réception en Node.js / Express :
 ```typescript
@@ -528,6 +546,181 @@ const validatedTx = await baas.payments.pollTransaction(session.reference, {
 });
 console.log('Paiement confirmé avec succès !', validatedTx);
 ```
+
+---
+
+## 💡 Module Factures & Services Concessionnaires (ENEO, CamWater, Canal+, Airtime)
+
+Permettez à vos utilisateurs de régler leurs factures concessionnaires, recharger du crédit téléphonique ou souscrire à des forfaits TV/Data directement dans vos applications, tout en générant des **factures et reçus 100% personnalisés à l'image de votre entreprise**.
+
+### 🌟 Services Concessionnaires Disponibles :
+* **Factures d'Électricité & Eau** : `ENEO` (Police / Contrat), `CAMWATER`.
+* **Bouquets TV & Câble** : `CANAL_PLUS` (Formules Access, Évasion, Tout Canal+...), `STARSAT`.
+* **Recharges Crédit Téléphonique (Airtime)** : `MTN_AIRTIME`, `ORANGE_AIRTIME`, `CAMTEL_AIRTIME`, `NEXTTEL_AIRTIME`, `YOOMEE_AIRTIME`.
+* **Forfaits Internet & Vouchers** : `MTN_DATA`, `SNS_VOUCHER`, `TALK360`.
+
+---
+
+### 1. Obtenir le Catalogue des Services & Frais de Commission
+
+```typescript
+// Récupérer tous les services actifs avec leur grille tarifaire
+const services = await baas.bills.getServices();
+console.log('Services disponibles :', services);
+
+// Filtrer par catégorie : 'bill' (factures), 'tv' (bouquets), 'airtime' (crédit), 'data', 'voucher'
+const tvServices = await baas.bills.getServices({ category: 'tv' });
+```
+
+---
+
+### 2. Consulter les Factures Impayées (ENEO & CamWater)
+
+Avant le règlement, interrogez le serveur concessionnaire pour afficher le montant exact dû par l'abonné ainsi que les frais de service calculés automatiquement :
+
+```typescript
+const result = await baas.bills.checkBill({
+  serviceCode: 'ENEO',
+  serviceNumber: '2010023456', // Numéro de police / contrat abonné
+});
+
+console.log(`Factures trouvées : ${result.bills_count}`);
+console.log(`Montant total dû (factures + commission) : ${result.total_amount} XAF`);
+
+result.bills.forEach(bill => {
+  console.log(`- Facture N° ${bill.bill_number} (${bill.bill_month} ${bill.bill_year}) : ${bill.amount} XAF (Commission : ${bill.admin_fee} XAF)`);
+});
+```
+
+---
+
+### 3. Consulter les Bouquets et Formules (Canal+, StarSat)
+
+```typescript
+const bouquets = await baas.bills.getPackages('CANAL_PLUS');
+
+bouquets.packages.forEach(pkg => {
+  console.log(`Formule ${pkg.name} : ${pkg.total_price} XAF (PayItemId: ${pkg.pay_item_id})`);
+});
+```
+
+---
+
+### 4. Payer une Facture ou Souscrire à un Bouquet
+
+```typescript
+const payment = await baas.bills.payBill({
+  serviceCode: 'ENEO',
+  serviceNumber: '2010023456',
+  amount: 15000,
+  billNumber: 'FAC_ENEO_2026_09',
+  customerName: 'Paul Tchinda',
+  customerPhone: '699112233',
+  customerEmail: 'paul.tchinda@gmail.com',
+  paymentMethod: 'WALLET', // Ou 'MOMO', 'OM'
+});
+
+console.log('✅ Facture réglée avec succès !');
+console.log('PTN de confirmation :', payment.ptn);
+console.log('Lien de visualisation du reçu :', payment.render_url);
+```
+
+---
+
+### 5. Recharger du Crédit Téléphonique (Airtime)
+
+```typescript
+const topup = await baas.bills.payAirtime({
+  serviceCode: 'MTN_AIRTIME', // Ou 'ORANGE_AIRTIME', 'CAMTEL_AIRTIME', etc.
+  phoneNumber: '677889900',
+  amount: 1000, // Montant de la recharge en XAF
+  customerName: 'Franck Kamga',
+});
+
+console.log(`✅ Recharge de ${topup.amount} XAF envoyée vers le ${topup.invoice.customer.phone}`);
+console.log('Reçu disponible sur :', topup.render_url);
+```
+
+---
+
+### 6. Personnaliser vos Factures et Reçus de Paiement
+
+Vous pouvez configurer la marque blanche de vos reçus directement depuis votre code ou via l'API BaaS. Tous les reçus imprimés ou affichés par vos clients contiendront automatiquement votre identité visuelle :
+
+```typescript
+// Mettre à jour l'identité visuelle de vos reçus
+await baas.bills.updateReceiptTemplate({
+  companyName: 'Ma Super FinTech Cameroun',
+  logoUrl: 'https://monapp.cm/assets/logo.png',
+  primaryColor: '#6366f1', // Teinte personnalisée du reçu
+  address: 'Boulevard de la Liberté, Akwa, Douala',
+  phone: '+237 690 00 00 00',
+  email: 'contact@masuperfintech.cm',
+  taxId: 'M092100012345Z', // NUI / Registre de commerce
+  footerNote: 'Merci d\'avoir utilisé notre guichet digital ! Service client 24/7.',
+  showQrCode: true,
+  customFields: {
+    'Guichetier': 'Jean Dupont',
+    'Agence': 'Douala Akwa Centre'
+  }
+});
+
+// Récupérer le reçu officiel d'une transaction
+const receipt = await baas.bills.getReceipt('BILL_O85QALTULG_1790160727');
+console.log('Détails du reçu :', receipt);
+```
+
+> 💡 **Affichage Direct Client** : L'URL `render_url` fournie dans la réponse renvoie une page web HTML moderne, responsive et prête à l'impression (`window.print()`), compatible avec les imprimantes thermiques POS (80mm) et le format PDF A4.
+
+---
+
+### 7. Gestion des Commissions Administrateur
+
+Les frais de transaction perçus sur les factures et recharges sont configurables en direct par l'administrateur de la plateforme via le panneau d'administration BaaS (`/baas/admin`) :
+* **Frais fixes** (ex: `250 XAF` par facture ENEO, `200 XAF` par facture CamWater, `500 XAF` par bouquet Canal+).
+* **Frais au pourcentage** (ex: `2%` sur le crédit MTN / Orange Airtime).
+* L'API calcule automatiquement le montant exact prélevé et le détaille dans l'objet `invoice_data`.
+
+---
+
+### 8. Consulter l'Historique de vos Transactions & Factures / View Transaction History & Invoices
+
+Après chaque paiement de facture ou recharge, vos utilisateurs peuvent retrouver l'intégralité de leur historique et obtenir les détails de chaque transaction directement depuis votre application.
+
+> **FR** : Cette API est disponible avec la clé applicative (`X-Baas-App-Key`). Les résultats sont filtrés automatiquement par projet.  
+> **EN** : This API is available with your app key (`X-Baas-App-Key`). Results are automatically scoped to your project.
+
+```typescript
+// FR: Lister toutes les transactions de factures (paginé)
+// EN: List all bill transactions (paginated)
+const invoices = await baas.bills.listInvoices({
+  page: 1,
+  perPage: 20,
+  serviceCode: 'ENEO',         // Optionnel / Optional — filtre par service
+  status: 'completed',         // 'pending' | 'completed' | 'failed'
+});
+
+console.log(`Total transactions : ${invoices.total}`);
+invoices.data.forEach(tx => {
+  console.log(`[${tx.reference}] ${tx.service_code} — ${tx.total_amount} XAF — ${tx.status}`);
+  console.log('  Reçu :', tx.render_url);
+});
+
+// FR: Récupérer les détails complets d'une facture spécifique
+// EN: Get full details of a specific invoice by reference
+const invoice = await baas.bills.getInvoice('BILL_O85QALTULG_1790160727');
+
+console.log('Service :', invoice.service_code);
+console.log('Client :', invoice.invoice_data.customer.name);
+console.log('Montant facture :', invoice.invoice_data.bill_amount, 'XAF');
+console.log('Commission :', invoice.invoice_data.admin_fee, 'XAF');
+console.log('Montant total :', invoice.invoice_data.total_amount, 'XAF');
+console.log('Reçu HTML :', invoice.render_url);
+```
+
+> 💡 **Auto-service Développeur** : Depuis la console BaaS (`/baas/console/bills`), vous pouvez également initier des paiements de factures pour votre propre compte et retrouver tout votre historique de transactions en temps réel.
+> 
+> 💡 **Developer Self-Service** : From the BaaS Console (`/baas/console/bills`), you can also pay utility bills directly for your own account and access your full transaction history in real time.
 
 ---
 
