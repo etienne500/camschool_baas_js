@@ -36,6 +36,7 @@ export type QueryOperator =
   | '=='
   | '='
   | '!='
+  | '<>'
   | '>'
   | '>='
   | '<'
@@ -43,7 +44,18 @@ export type QueryOperator =
   | 'in'
   | 'not_in'
   | 'contains'
-  | 'array_contains';
+  | 'array_contains'
+  | 'array_contains_any'
+  | 'array_contains_all'
+  | 'starts_with'
+  | 'ends_with'
+  | 'like'
+  | 'ilike'
+  | 'regex'
+  | 'between'
+  | 'not_between'
+  | 'is_null'
+  | 'exists';
 
 export interface QueryFilter {
   field: string;
@@ -51,12 +63,37 @@ export interface QueryFilter {
   value: any;
 }
 
+export interface BaasJoinOptions {
+  collection: string;
+  localField?: string;
+  foreignField?: string;
+  as?: string;
+  single?: boolean;
+  type?: 'left' | 'inner';
+  select?: string[];
+  where?: QueryFilter[] | Record<string, any>;
+  orderBy?: string;
+  limit?: number;
+  join?: BaasJoinOptions[];
+}
+
+export interface AggregationResult {
+  count?: number;
+  group_by?: string;
+  groups?: Array<Record<string, any>>;
+  [key: string]: any;
+}
+
 export interface QueryOptions {
   filters?: QueryFilter[];
+  where?: Record<string, any> | QueryFilter[];
   order_by?: string | null;
   order_dir?: 'asc' | 'desc';
   limit?: number;
   page?: number;
+  expand?: string | string[];
+  join?: BaasJoinOptions[];
+  select?: string | string[];
 }
 
 export interface BaasFileMetadata {

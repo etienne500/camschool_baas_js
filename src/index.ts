@@ -8,7 +8,7 @@ export function createClient(config: BaasConfig): BaasClient {
   return new BaasClient(config);
 }
 
-export { BaasClient };
+export { BaasClient, BaasClient as BaaS };
 export * from './types';
 export * from './errors';
 export * from './auth';

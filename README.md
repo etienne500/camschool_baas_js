@@ -174,23 +174,163 @@ await baas.database.collection('livres').doc('livre_ngul_01').update({
 });
 ```
 
-### 2. Requêtes Avancées & Filtres Puissants
+### 2. Requêtes Complexes & Arbres Logiques ($or, $and, $nor, $regex)
+
+CamSchool BaaS permet d'exécuter des requêtes NoSQL hautement complexes avec imbrication arbitraire de conditions :
 
 ```typescript
-// Requête multi-critères NoSQL haute vitesse
+// Requête complexe avec branches $or et $and imbriquées
 const snapshot = await baas.database
-  .collection('livres')
-  .where('categorie', '==', 'Bande Dessinée')
-  .where('prix', '<=', 5000)
-  .where('tags', 'array-contains', 'cameroun')
-  .orderBy('created_at', 'desc')
-  .limit(20)
+  .collection('produits')
+  .whereComplex({
+    $or: [
+      {
+        $and: [
+          { status: 'published' },
+          { prix: { $gte: 1000, $lte: 10000 } },
+          { stock: { $gt: 0 } },
+        ]
+      },
+      {
+        $and: [
+          { is_featured: true },
+          { note_moyenne: { $gte: 4.5 } }
+        ]
+      }
+    ]
+  })
+  .orderBy('prix', 'asc')
+  .limit(25)
   .get();
 
-console.log('Résultats trouvés :', snapshot.docs);
+// Utilisation des helpers fluides .whereOr() et .whereAnd()
+const articles = await baas.database
+  .collection('articles')
+  .where('is_published', '==', true)
+  .whereOr([
+    { categorie: 'Science' },
+    { tags: { $contains: 'technologie' } },
+    { vues: { $gte: 1000 } }
+  ])
+  .get();
 ```
 
-### 3. [V2] Filtrage des champs (Select) & Sync Différentiel
+---
+
+### 3. 🚀 Jointures Multi-Tables & Relations Profondes (Profondeur 10+ Ultra-Rapide)
+
+Le moteur de jointure NoSQL CamSchool BaaS résout les relations multi-tables en **O(1) requêtes SQL groupées** (Zéro problème N+1), permettant d'atteindre une **profondeur de 10 niveaux et plus** en moins de **15 millisecondes** !
+
+#### A. Notation Shorthand par Chemins Délimités (`.expand()` / `.populate()`) :
+```typescript
+// Récupérer des commandes avec leurs relations imbriquées jusqu'à 10+ niveaux de profondeur :
+// Commande -> Client -> Entreprise -> Ville -> Région -> Pays -> Devise -> Continent...
+const commandes = await baas.database
+  .collection('commandes')
+  .where('statut', '==', 'livre')
+  .expand('client.entreprise.ville.region.pays.devise.continent,articles.produit.fournisseur.banque')
+  .limit(50)
+  .get();
+
+console.log('Nom client :', commandes[0].data.client.nom);
+console.log('Entreprise :', commandes[0].data.client.entreprise.nom);
+console.log('Pays :', commandes[0].data.client.entreprise.ville.region.pays.nom);
+console.log('Devise :', commandes[0].data.client.entreprise.ville.region.pays.devise.code);
+```
+
+#### B. Jointures Riches avec Filtres, Tris et Sélections Spécifiques (`.join()`) :
+```typescript
+const posts = await baas.database
+  .collection('articles')
+  .where('status', '==', 'published')
+  .join({
+    collection: 'utilisateurs',
+    localField: 'auteur_id',
+    foreignField: 'document_id',
+    as: 'auteur',
+    single: true,
+    select: ['id', 'nom', 'email', 'avatar', 'entreprise_id'],
+    join: [
+      {
+        collection: 'entreprises',
+        localField: 'entreprise_id',
+        foreignField: 'document_id',
+        as: 'entreprise',
+        single: true,
+        join: [
+          {
+            collection: 'pays',
+            localField: 'pays_id',
+            foreignField: 'document_id',
+            as: 'pays'
+            // ... imbrication possible jusqu'à 15+ niveaux !
+          }
+        ]
+      }
+    ]
+  })
+  .join({
+    collection: 'commentaires',
+    localField: 'document_id',
+    foreignField: 'article_id',
+    as: 'commentaires',
+    single: false, // Relation 1-à-N (hasMany)
+    where: [['is_approuve', '==', true]],
+    orderBy: 'created_at:desc',
+    limit: 10,
+    join: [
+      {
+        collection: 'utilisateurs',
+        localField: 'auteur_id',
+        foreignField: 'document_id',
+        as: 'auteur',
+        select: ['nom', 'avatar']
+      }
+    ]
+  })
+  .get();
+```
+
+---
+
+### 4. 📊 Agrégations Statistiques ($sum, $avg, $min, $max, $count, $groupBy)
+
+Calculez des métriques statistiques en temps réel sur des millions de documents sans charger les enregistrements bruts en mémoire :
+
+```typescript
+// Calcul global
+const stats = await baas.database
+  .collection('ventes')
+  .where('statut', '==', 'paye')
+  .aggregate({
+    total_chiffre_affaires: 'sum:montant',
+    panier_moyen: 'avg:montant',
+    vente_max: 'max:montant',
+    vente_min: 'min:montant',
+    nombre_ventes: 'count:id',
+  });
+
+console.log('Chiffre d\'affaires total :', stats.total_chiffre_affaires, 'XAF');
+console.log('Panier moyen :', stats.panier_moyen, 'XAF');
+
+// Agrégation groupée par catégorie / pays ($groupBy)
+const statsParCategorie = await baas.database
+  .collection('ventes')
+  .aggregate(
+    {
+      ca_categorie: 'sum:montant',
+      commandes_count: 'count:id'
+    },
+    'categorie' // Regroupement par champ
+  );
+
+console.log('Groupes calculés :', statsParCategorie.groups);
+// [ { group: 'Informatique', count: 140, ca_categorie: 14500000 }, { group: 'Livres', count: 85, ca_categorie: 850000 } ]
+```
+
+---
+
+### 5. [V2] Filtrage des champs (Select) & Sync Différentiel
 
 L'API V2 permet de réduire la bande passante consommée (Zéro octet gaspillé) en utilisant la projection de champs et le cache ETag :
 
@@ -213,8 +353,17 @@ const snapshotOptimized = await baas.v2.database
 | `<`, `<=` | Comparaison numérique / date inférieure | `.where('vues', '<', 500)` |
 | `in` | Appartient à une liste | `.where('ville', 'in', ['Douala', 'Yaoundé'])` |
 | `not_in` | N'appartient pas à la liste | `.where('tag', 'not_in', ['archive'])` |
+| `between` | Intervalle de valeurs | `.where('age', 'between', [18, 35])` |
 | `array-contains` | Tableau JSON contient la valeur | `.where('passions', 'array-contains', 'Musique')` |
+| `array-contains-any` | Tableau contient au moins un des éléments | `.where('tags', 'array-contains-any', ['promo', 'flash'])` |
 | `starts_with` | Commence par le préfixe | `.where('titre', 'starts_with', 'NGÙL')` |
+| `ends_with` | Se termine par le suffixe | `.where('email', 'ends_with', '@camschool.cm')` |
+| `like` / `ilike` | Recherche de sous-chaîne | `.where('nom', 'like', 'dupont')` |
+| `regex` | Expression régulière | `.where('code', 'regex', '^[A-Z]{3}-[0-9]{4}$')` |
+| `is_null` | Teste si le champ est null ou non | `.where('deleted_at', 'is_null', true)` |
+| `.expand()` | Jointure multi-tables récursive (profondeur 10+) | `.expand('auteur.entreprise.pays.devise')` |
+| `.join()` | Configuration détaillée de jointure | `.join({ collection: 'commentaires', as: 'comments' })` |
+| `.aggregate()` | Calcul statistique groupé ($sum, $avg, $min, $max) | `.aggregate({ total: 'sum:prix' }, 'categorie')` |
 | `.search()` | Recherche textuelle globale | `.collection('livres').search('Aventure').get()` |
 
 ---

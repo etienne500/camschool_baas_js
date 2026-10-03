@@ -90,8 +90,10 @@ export class BaasBills {
    */
   async checkBill(serviceCode: string, serviceNumber: string): Promise<any> {
     return this.client.request('POST', 'bills/check', {
-      service_code: serviceCode,
-      service_number: serviceNumber,
+      body: {
+        service_code: serviceCode,
+        service_number: serviceNumber,
+      },
     });
   }
 
@@ -106,14 +108,14 @@ export class BaasBills {
    * Pay a utility bill (ENEO, CamWater, Canal+, StarSat)
    */
   async payBill(params: BillPayParams): Promise<any> {
-    return this.client.request('POST', 'bills/pay', params);
+    return this.client.request('POST', 'bills/pay', { body: params });
   }
 
   /**
    * Recharge mobile airtime or data plan (MTN, Orange, Nexttel, Camtel, YooMee)
    */
   async payAirtime(params: AirtimePayParams): Promise<any> {
-    return this.client.request('POST', 'bills/airtime', params);
+    return this.client.request('POST', 'bills/airtime', { body: params });
   }
 
   /**
@@ -183,6 +185,6 @@ export class BaasBills {
    * Update the project's receipt branding template
    */
   async updateTemplate(templateData: any): Promise<any> {
-    return this.client.request('POST', 'bills/template', templateData);
+    return this.client.request('POST', 'bills/template', { body: templateData });
   }
 }

@@ -120,17 +120,19 @@ export class BaasPayments {
    */
   async createCheckoutSession(options: CheckoutSessionOptions): Promise<CheckoutSessionResult> {
     const res = await this.client.request<CheckoutSessionResult>('POST', 'payments/checkout', {
-      amount: options.amount,
-      currency: options.currency || 'XAF',
-      allowed_methods: options.allowedMethods || ['ORANGE_MONEY', 'MTN_MOMO', 'CARD', 'PAYPAL'],
-      customer_name: options.customerName,
-      customer_email: options.customerEmail,
-      phone: options.phone,
-      description: options.description,
-      notify_url: options.notifyUrl || options.callbackUrl,
-      success_url: options.successUrl || options.returnUrl,
-      fail_url: options.failUrl || options.cancelUrl,
-      metadata: options.metadata,
+      body: {
+        amount: options.amount,
+        currency: options.currency || 'XAF',
+        allowed_methods: options.allowedMethods || ['ORANGE_MONEY', 'MTN_MOMO', 'CARD', 'PAYPAL'],
+        customer_name: options.customerName,
+        customer_email: options.customerEmail,
+        phone: options.phone,
+        description: options.description,
+        notify_url: options.notifyUrl || options.callbackUrl,
+        success_url: options.successUrl || options.returnUrl,
+        fail_url: options.failUrl || options.cancelUrl,
+        metadata: options.metadata,
+      },
     });
     return res;
   }

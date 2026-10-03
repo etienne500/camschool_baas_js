@@ -151,3 +151,5 @@ export class BaasClient {
     return this.database.collection<T>(name);
   }
 }
+
+export { BaasClient as BaaS };

@@ -1,9 +1,11 @@
-﻿import { BaasClient } from './client';
+import { BaasClient } from './client';
 import {
   BaasDocument,
   QueryFilter,
   QueryOperator,
   BatchOperation,
+  BaasJoinOptions,
+  AggregationResult,
 } from './types';
 
 export class BaasDatabase {
@@ -26,6 +28,10 @@ export class BaasQuery<T = Record<string, any>> {
   protected client: BaasClient;
   public collectionName: string;
   protected filters: QueryFilter[] = [];
+  protected complexWhere: Record<string, any> | null = null;
+  protected joins: BaasJoinOptions[] = [];
+  protected expandPaths: string[] = [];
+  protected selectFields: string[] = [];
   protected orderByField: string | null = null;
   protected orderDir: 'asc' | 'desc' = 'asc';
   protected limitCount?: number;
@@ -39,6 +45,73 @@ export class BaasQuery<T = Record<string, any>> {
   public where(field: string, operator: QueryOperator, value: any): BaasQuery<T> {
     const q = this.clone();
     q.filters.push({ field, operator, value });
+    return q;
+  }
+
+  /**
+   * Add a deep recursive multi-table join definition (supports depth 10+).
+   */
+  public join(options: BaasJoinOptions): BaasQuery<T> {
+    const q = this.clone();
+    q.joins.push(options);
+    return q;
+  }
+
+  /**
+   * Expand/Populate relations using dot-notation string paths (e.g. 'author.company.country.region.continent').
+   */
+  public expand(paths: string | string[]): BaasQuery<T> {
+    const q = this.clone();
+    const arr = Array.isArray(paths) ? paths : [paths];
+    q.expandPaths.push(...arr);
+    return q;
+  }
+
+  /**
+   * Alias for expand().
+   */
+  public populate(paths: string | string[]): BaasQuery<T> {
+    return this.expand(paths);
+  }
+
+  /**
+   * Select specific fields to return from the documents.
+   */
+  public select(fields: string | string[]): BaasQuery<T> {
+    const q = this.clone();
+    const arr = Array.isArray(fields) ? fields : [fields];
+    q.selectFields.push(...arr);
+    return q;
+  }
+
+  /**
+   * Add an OR filter expression across multiple conditions.
+   */
+  public whereOr(conditions: Array<QueryFilter | Record<string, any>>): BaasQuery<T> {
+    const q = this.clone();
+    if (!q.complexWhere) q.complexWhere = {};
+    if (!q.complexWhere['$or']) q.complexWhere['$or'] = [];
+    q.complexWhere['$or'].push(...conditions);
+    return q;
+  }
+
+  /**
+   * Add an AND filter expression across multiple conditions.
+   */
+  public whereAnd(conditions: Array<QueryFilter | Record<string, any>>): BaasQuery<T> {
+    const q = this.clone();
+    if (!q.complexWhere) q.complexWhere = {};
+    if (!q.complexWhere['$and']) q.complexWhere['$and'] = [];
+    q.complexWhere['$and'].push(...conditions);
+    return q;
+  }
+
+  /**
+   * Pass a rich MongoDB/Firestore-like query tree ($and, $or, $nor, $regex, nested fields).
+   */
+  public whereComplex(tree: Record<string, any>): BaasQuery<T> {
+    const q = this.clone();
+    q.complexWhere = { ...(q.complexWhere || {}), ...tree };
     return q;
   }
 
@@ -64,6 +137,10 @@ export class BaasQuery<T = Record<string, any>> {
   protected clone(): BaasQuery<T> {
     const copy = new BaasQuery<T>(this.client, this.collectionName);
     copy.filters = [...this.filters];
+    copy.complexWhere = this.complexWhere ? JSON.parse(JSON.stringify(this.complexWhere)) : null;
+    copy.joins = JSON.parse(JSON.stringify(this.joins));
+    copy.expandPaths = [...this.expandPaths];
+    copy.selectFields = [...this.selectFields];
     copy.orderByField = this.orderByField;
     copy.orderDir = this.orderDir;
     copy.limitCount = this.limitCount;
@@ -71,11 +148,19 @@ export class BaasQuery<T = Record<string, any>> {
     return copy;
   }
 
+  /**
+   * Execute the query and retrieve matching documents with hydrated multi-table joins.
+   */
   public async get(): Promise<BaasDocument<T>[]> {
     const payload: Record<string, any> = {
-      filters: this.filters,
       order_dir: this.orderDir,
     };
+
+    if (this.filters.length > 0) payload.filters = this.filters;
+    if (this.complexWhere) payload.where = this.complexWhere;
+    if (this.joins.length > 0) payload.join = this.joins;
+    if (this.expandPaths.length > 0) payload.expand = this.expandPaths.join(',');
+    if (this.selectFields.length > 0) payload.select = this.selectFields.join(',');
     if (this.orderByField) payload.order_by = this.orderByField;
     if (this.limitCount !== undefined) payload.limit = this.limitCount;
     if (this.pageNumber !== undefined) payload.page = this.pageNumber;
@@ -97,6 +182,37 @@ export class BaasQuery<T = Record<string, any>> {
         updated_at: item.updated_at,
       };
     });
+  }
+
+  /**
+   * Compute statistical aggregations ($sum, $avg, $min, $max, $count, $groupBy).
+   */
+  public async aggregate(
+    aggregations: Record<string, string | Record<string, any>>,
+    groupBy?: string
+  ): Promise<AggregationResult> {
+    const payload: Record<string, any> = {
+      aggregate: aggregations,
+    };
+    if (groupBy) payload.groupBy = groupBy;
+    if (this.filters.length > 0) payload.filters = this.filters;
+    if (this.complexWhere) payload.where = this.complexWhere;
+
+    const res = await this.client.request(
+      'POST',
+      `collections/${this.collectionName}/aggregate`,
+      { body: payload }
+    );
+
+    return res.data || {};
+  }
+
+  /**
+   * Count documents matching the current query filters.
+   */
+  public async count(): Promise<number> {
+    const agg = await this.aggregate({ total: 'count:id' });
+    return typeof agg.total === 'number' ? agg.total : (agg.count ?? 0);
   }
 }
 
@@ -132,14 +248,22 @@ export class BaasDocumentReference<T = Record<string, any>> {
     this.id = documentId || '';
   }
 
-  public async get(): Promise<BaasDocument<T>> {
+  public async get(options?: { expand?: string | string[]; join?: BaasJoinOptions[] }): Promise<BaasDocument<T>> {
     if (!this.id) {
       throw new Error('Document ID is required for get().');
     }
 
+    const queryParams: string[] = [];
+    if (options?.expand) {
+      const exp = Array.isArray(options.expand) ? options.expand.join(',') : options.expand;
+      queryParams.push(`expand=${encodeURIComponent(exp)}`);
+    }
+
+    const queryStr = queryParams.length ? `?${queryParams.join('&')}` : '';
+
     const res = await this.client.request(
       'GET',
-      `collections/${this.collectionName}/documents/${this.id}`
+      `collections/${this.collectionName}/documents/${this.id}${queryStr}`
     );
 
     const item = res.data || {};
