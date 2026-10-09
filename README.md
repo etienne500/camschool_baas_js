@@ -663,7 +663,8 @@ var mykey = "pk_live_votre_cle_api"; // ou "key" pour le mode test
 document.addEventListener("DOMContentLoaded", function () {
   const paiementBtn = document.getElementById("paiement");
   paiementBtn.addEventListener("click", function (e) {
-    paiement(callbackReussite, callbackErreur, mykey);
+    // Passage du montant dynamique (ex: 5000 FCFA) :
+    paiement(callbackReussite, callbackErreur, mykey, 5000);
   });
 });
 
@@ -679,52 +680,99 @@ function callbackErreur(data) {
 </script>
 ```
 
-#### 🎨 Personnalisation Graphique du Widget (Couleurs, Logo, Label)
+#### 💰 Passage du Montant Dynamique au Widget
 
-Le widget permet de personnaliser facilement son apparence pour correspondre parfaitement à votre charte graphique :
+Le widget accepte le montant de 3 manières ultra-flexibles :
+
+1. **Directement en 4ème argument numérique** :
+   ```javascript
+   paiement(callbackReussite, callbackErreur, mykey, 5000);
+   ```
+2. **Via un objet de configuration complet** :
+   ```javascript
+   paiement(callbackReussite, callbackErreur, mykey, {
+     amount: 5000,
+     currency: "XAF",
+     description: "Commande #9021"
+   });
+   ```
+3. **Via l'attribut HTML `data-amount` sur le bouton déclencheur** :
+   ```html
+   <button id="paiement" data-amount="5000" data-label="Abonnement Pro">
+     Payer 5 000 FCFA
+   </button>
+   ```
+
+---
+
+#### 🔄 Flux de Paiement Intelligent : USSD Direct & Redirection PayMooney / Cartes
+
+Le widget gère automatiquement les spécificités de chaque mode de paiement :
+
+* 📱 **Mobile Money Direct (NoKash)** :  
+  Une notification Push USSD est envoyée directement sur le téléphone de l'acheteur (`#150*50#` pour Orange Money, `*126#` pour MTN MoMo) pour composer son code PIN. Le widget affiche un compte à rebours et écoute la validation en temps réel.
+* 🌐 **PayMooney, Cartes Bancaires (Visa/Mastercard) & PayPal** :  
+  1. Le widget initie la transaction et récupère le lien de paiement sécurisé fourni par la passerelle.
+  2. **Un nouvel onglet s'ouvre automatiquement (`_blank`)** vers la page de paiement sécurisée pour permettre à l'utilisateur de régler sa transaction.
+  3. **L'onglet initial avec le widget reste grand ouvert** : il affiche l'écran de vérification avec un bouton de secours cliquable (*« 🔗 Ouvrir la page de paiement »*) si les fenêtres popups sont bloquées.
+  4. Le widget effectue un **contrôle continu en arrière-plan (polling toutes les 2.5 secondes)**.
+  5. Dès que le client a finalisé le règlement et que la passerelle confirme l'opération, le widget dans l'onglet initial bascule automatiquement sur l'**écran vert de succès** et exécute votre fonction `callbackReussite(data)`.
+
+---
+
+#### 🎨 Personnalisation Graphique du Widget (Couleurs, Logo, Label, Champs)
+
+Vous pouvez configurer l'apparence du widget **directement depuis la Console Développeur BaaS** (avec aperçu en temps réel) ou **dynamiquement via votre code JavaScript / HTML** :
 
 | Option | Description | Valeur par défaut | Exemple |
 | :--- | :--- | :--- | :--- |
 | **`label`** | Sous-titre descriptif / libellé de l'action de paiement | `"Paiement sécurisé et instantané"` | `"Règlement de vos achats"` |
-| **`Widget title hex color`** | Couleur hexadécimale du titre du widget | `"#1E1B4B"` (Dark Indigo) | `"#0F172A"` ou `"#111827"` |
-| **`Widget hex color`** | Couleur hexadécimale principale (boutons, sélecteurs, accents) | `"#FF6B00"` (Orange CamSchool) | `"#10B981"` ou `"#2563EB"` |
+| **`Widget title hex color`** | Couleur hexadécimale du titre du widget (Secondary) | `"#1E1B4B"` (Dark Indigo) | `"#0F172A"` ou `"#111827"` |
+| **`Widget hex color`** | Couleur hexadécimale principale des boutons et accents (Primary) | `"#FF6B00"` (Orange CamSchool) | `"#10B981"` ou `"#2563EB"` |
 | **`logo`** | URL du logo personnalisé de votre entreprise/application | Logo officiel SVG CamSchool BaaS | `"https://monsite.com/logo.png"` |
+| **`showCustomerName`** | Afficher (`true`) ou masquer (`false`) la saisie du nom complet | `true` | `false` ou `data-show-customer-name="false"` |
+| **`lang / language`** | Code langue de l'interface (`fr`, `en`, `es`, `de`, `pt`) | Auto-détection GeoIP | `"fr"` ou `"en"` |
 
 #### Méthodes de Configuration Disponibles :
 
-##### Option A : Variables globales JavaScript
+##### Option A : Directement depuis la Console Développeur BaaS
+Dans votre console BaaS (Menu **Paiements & Checkout Hébergé** > Onglet **🎨 Personnalisation du Widget**) : configurez visuellement vos couleurs, votre logo, le titre et choisissez d'activer ou de masquer le champ du nom complet avec un **aperçu interactif en temps réel**.
+
+##### Option B : Variables globales JavaScript
 ```html
 <script>
 var widgetLabel = "Valider ma commande";
-var widgetTitleHexColor = "#0F172A"; // Couleur hex du titre
-var widgetHexColor = "#10B981";      // Couleur hex principale du widget
+var widgetTitleHexColor = "#0F172A"; // Titre
+var widgetHexColor = "#10B981";      // Bouton principal
 var widgetLogo = "https://monsite.com/images/mon-logo.png";
 var mykey = "pk_live_votre_cle";
 
-paiement(callbackReussite, callbackErreur, mykey);
+paiement(callbackReussite, callbackErreur, mykey, 5000);
 </script>
 ```
 
-##### Option B : Objet de configuration optionnel en 4ème argument
+##### Option C : Objet de configuration optionnel en 4ème argument
 ```javascript
 paiement(callbackReussite, callbackErreur, mykey, {
   label: "Abonnement Annuel",
   widgetTitleHexColor: "#1E1B4B",
   widgetHexColor: "#FF6B00",
   logo: "https://monsite.com/assets/logo.png",
-  amount: 5000,        // Optionnel : montant pré-défini
-  currency: "XAF",     // Optionnel (XAF par défaut)
+  showCustomerName: false, // Masquer le champ Nom Complet optionnel
+  amount: 5000,            // Montant dynamique
+  currency: "XAF",         // Devise (XAF par défaut)
   description: "Accès Premium"
 });
 ```
 
-##### Option C : Attributs HTML `data-*` sur le bouton déclencheur
+##### Option D : Attributs HTML `data-*` sur le bouton déclencheur
 ```html
 <button id="paiement"
   data-label="Acheter le produit"
   data-widget-title-hex-color="#1E1B4B"
   data-widget-hex-color="#FF6B00"
   data-logo="https://monsite.com/logo.png"
+  data-show-customer-name="false"
   data-amount="2500">
   Acheter (2 500 XAF)
 </button>
