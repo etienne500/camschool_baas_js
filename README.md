@@ -646,7 +646,94 @@ window.location.href = session.checkout_url;
 
 ---
 
-### 3. Réception du Webhook IPN (`notify_url`) dans votre Backend
+### 3. 🌐 Intégration Simple par Balise Script (Widget Universel)
+
+Pour les sites vitrines, e-commerce, applications web simples ou pages sans framework, vous pouvez intégrer le widget de paiement officiel CamSchool BaaS en **une seule ligne de code** :
+
+```html
+<!-- 1. Inclusion du script universel -->
+<script src="https://camschool.kmrshop.com/baas/app/views/Widget/js/scriptwidget.js"></script>
+
+<!-- 2. Bouton de déclenchement et gestionnaire -->
+<button id="paiement">Payer maintenant</button>
+
+<script>
+var mykey = "pk_live_votre_cle_api"; // ou "key" pour le mode test
+
+document.addEventListener("DOMContentLoaded", function () {
+  const paiementBtn = document.getElementById("paiement");
+  paiementBtn.addEventListener("click", function (e) {
+    paiement(callbackReussite, callbackErreur, mykey);
+  });
+});
+
+function callbackReussite(data) {
+  console.log("Le paiement a réussi !", data);
+  alert("Paiement validé avec succès ! Réf: " + data.reference);
+}
+
+function callbackErreur(data) {
+  console.log("Le paiement a échoué !", data);
+  alert("Échec du paiement : " + data.message);
+}
+</script>
+```
+
+#### 🎨 Personnalisation Graphique du Widget (Couleurs, Logo, Label)
+
+Le widget permet de personnaliser facilement son apparence pour correspondre parfaitement à votre charte graphique :
+
+| Option | Description | Valeur par défaut | Exemple |
+| :--- | :--- | :--- | :--- |
+| **`label`** | Sous-titre descriptif / libellé de l'action de paiement | `"Paiement sécurisé et instantané"` | `"Règlement de vos achats"` |
+| **`Widget title hex color`** | Couleur hexadécimale du titre du widget | `"#1E1B4B"` (Dark Indigo) | `"#0F172A"` ou `"#111827"` |
+| **`Widget hex color`** | Couleur hexadécimale principale (boutons, sélecteurs, accents) | `"#FF6B00"` (Orange CamSchool) | `"#10B981"` ou `"#2563EB"` |
+| **`logo`** | URL du logo personnalisé de votre entreprise/application | Logo officiel SVG CamSchool BaaS | `"https://monsite.com/logo.png"` |
+
+#### Méthodes de Configuration Disponibles :
+
+##### Option A : Variables globales JavaScript
+```html
+<script>
+var widgetLabel = "Valider ma commande";
+var widgetTitleHexColor = "#0F172A"; // Couleur hex du titre
+var widgetHexColor = "#10B981";      // Couleur hex principale du widget
+var widgetLogo = "https://monsite.com/images/mon-logo.png";
+var mykey = "pk_live_votre_cle";
+
+paiement(callbackReussite, callbackErreur, mykey);
+</script>
+```
+
+##### Option B : Objet de configuration optionnel en 4ème argument
+```javascript
+paiement(callbackReussite, callbackErreur, mykey, {
+  label: "Abonnement Annuel",
+  widgetTitleHexColor: "#1E1B4B",
+  widgetHexColor: "#FF6B00",
+  logo: "https://monsite.com/assets/logo.png",
+  amount: 5000,        // Optionnel : montant pré-défini
+  currency: "XAF",     // Optionnel (XAF par défaut)
+  description: "Accès Premium"
+});
+```
+
+##### Option C : Attributs HTML `data-*` sur le bouton déclencheur
+```html
+<button id="paiement"
+  data-label="Acheter le produit"
+  data-widget-title-hex-color="#1E1B4B"
+  data-widget-hex-color="#FF6B00"
+  data-logo="https://monsite.com/logo.png"
+  data-amount="2500">
+  Acheter (2 500 XAF)
+</button>
+```
+
+---
+
+### 4. Réception du Webhook IPN (`notify_url`) dans votre Backend
+
 
 Lorsque le client finalise son paiement sur la page hébergée (ou via les passerelles NoKash / PayMooney), CamSchool BaaS envoie une requête `POST` à votre `notify_url` contenant les données de transaction et un header de signature HMAC SHA256 `X-Baas-Signature`.
 
@@ -685,7 +772,7 @@ app.post('/api/payment/webhook', (req, res) => {
 
 ---
 
-### 4. Suivi en Direct d'une Transaction (Polling)
+### 5. Suivi en Direct d'une Transaction (Polling)
 
 ```typescript
 // Écoute en temps réel jusqu'à confirmation
