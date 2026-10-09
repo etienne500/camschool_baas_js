@@ -680,28 +680,45 @@ function callbackErreur(data) {
 </script>
 ```
 
-#### 💰 Passage du Montant Dynamique au Widget
+#### 💰 Passage du Montant et de la Devise Dynamique au Widget
 
-Le widget accepte le montant de 3 manières ultra-flexibles :
+Le widget accepte le montant et la devise de manière ultra-flexible :
 
-1. **Directement en 4ème argument numérique** :
+1. **Directement en 4ème argument numérique (Montant XAF par défaut)** :
    ```javascript
    paiement(callbackReussite, callbackErreur, mykey, 5000);
    ```
-2. **Via un objet de configuration complet** :
+2. **Via un objet de configuration complet avec Devise (`currency`)** :
    ```javascript
    paiement(callbackReussite, callbackErreur, mykey, {
-     amount: 5000,
-     currency: "XAF",
-     description: "Commande #9021"
+     amount: 50,
+     currency: "USD", // "USD", "EUR", "CAD", "XAF", "XOF"
+     description: "Commande Internationale #9021"
    });
    ```
-3. **Via l'attribut HTML `data-amount` sur le bouton déclencheur** :
+3. **Via les attributs HTML `data-amount` et `data-currency` sur le bouton déclencheur** :
    ```html
-   <button id="paiement" data-amount="5000" data-label="Abonnement Pro">
-     Payer 5 000 FCFA
+   <button id="paiement" data-amount="25" data-currency="USD" data-label="Buy Subscription">
+     Pay $25 USD
    </button>
    ```
+
+---
+
+#### 🌍 Filtrage Intelligent des Moyens de Paiement par Devise
+
+Le widget filtre automatiquement les moyens de paiement présentés au client en fonction de la **devise choisie** ET des **passerelles activées par le développeur dans son Dashboard** :
+
+* 🇨🇲 **Devises Locales (`XAF`, `XOF`, Franc CFA)** :
+  * 📱 **Orange Money** (`ORANGE_MONEY_NOKASH` ou `ORANGE_MONEY_PAYMOONEY`)
+  * 📱 **MTN Mobile Money** (`MTN_MOMO_NOKASH` ou `MTN_MOMO_PAYMOONEY`)
+  * 💼 **Express Union Mobile** (`EU_MOBILE_NOKASH`)
+  * 💳 **Cartes Bancaires Visa & Mastercard**
+* 🌐 **Devises Internationales (`USD`, `EUR`, `CAD`, `GBP`, etc.)** :
+  * 🅿️ **PayPal** (via PayMooney)
+  * 💳 **Cartes Bancaires Visa & Mastercard**
+  * *(Les modes Mobile Money locaux ne sont pas affichés pour les devises internationales)*
+* ⚙️ **Respect strict du Dashboard Développeur** : Si le développeur active uniquement *PayPal* pour les paiements en devises étrangères, seul PayPal s'affichera pour l'USD. Si *PayPal* et *Carte* sont tous les deux activés, les deux options seront proposées.
 
 ---
 
@@ -726,10 +743,12 @@ Vous pouvez configurer l'apparence du widget **directement depuis la Console Dé
 
 | Option | Description | Valeur par défaut | Exemple |
 | :--- | :--- | :--- | :--- |
-| **`label`** | Sous-titre descriptif / libellé de l'action de paiement | `"Paiement sécurisé et instantané"` | `"Règlement de vos achats"` |
+| **`amount`** / `data-amount` | Montant de la transaction | Dérivé du projet / 0 | `5000` ou `25` |
+| **`currency`** / `data-currency` | Devise de paiement (`XAF`, `USD`, `EUR`, etc.) | `"XAF"` | `"USD"`, `"EUR"`, `"XAF"` |
+| **`label`** / `data-label` | Sous-titre descriptif / libellé de l'action de paiement | `"Paiement sécurisé et instantané"` | `"Règlement de vos achats"` |
 | **`Widget title hex color`** | Couleur hexadécimale du titre du widget (Secondary) | `"#1E1B4B"` (Dark Indigo) | `"#0F172A"` ou `"#111827"` |
 | **`Widget hex color`** | Couleur hexadécimale principale des boutons et accents (Primary) | `"#FF6B00"` (Orange CamSchool) | `"#10B981"` ou `"#2563EB"` |
-| **`logo`** | URL du logo personnalisé de votre entreprise/application | Logo officiel SVG CamSchool BaaS | `"https://monsite.com/logo.png"` |
+| **`logo`** / `data-logo` | URL du logo personnalisé de votre entreprise/application | Logo officiel SVG CamSchool BaaS | `"https://monsite.com/logo.png"` |
 | **`showCustomerName`** | Afficher (`true`) ou masquer (`false`) la saisie du nom complet | `true` | `false` ou `data-show-customer-name="false"` |
 | **`lang / language`** | Code langue de l'interface (`fr`, `en`, `es`, `de`, `pt`) | Auto-détection GeoIP | `"fr"` ou `"en"` |
 
@@ -747,7 +766,10 @@ var widgetHexColor = "#10B981";      // Bouton principal
 var widgetLogo = "https://monsite.com/images/mon-logo.png";
 var mykey = "pk_live_votre_cle";
 
-paiement(callbackReussite, callbackErreur, mykey, 5000);
+paiement(callbackReussite, callbackErreur, mykey, {
+  amount: 25,
+  currency: "USD"
+});
 </script>
 ```
 
@@ -759,9 +781,9 @@ paiement(callbackReussite, callbackErreur, mykey, {
   widgetHexColor: "#FF6B00",
   logo: "https://monsite.com/assets/logo.png",
   showCustomerName: false, // Masquer le champ Nom Complet optionnel
-  amount: 5000,            // Montant dynamique
-  currency: "XAF",         // Devise (XAF par défaut)
-  description: "Accès Premium"
+  amount: 25,              // Montant dynamique
+  currency: "USD",         // Devise dynamique (USD, EUR, XAF...)
+  description: "Accès Premium International"
 });
 ```
 
@@ -773,8 +795,9 @@ paiement(callbackReussite, callbackErreur, mykey, {
   data-widget-hex-color="#FF6B00"
   data-logo="https://monsite.com/logo.png"
   data-show-customer-name="false"
-  data-amount="2500">
-  Acheter (2 500 XAF)
+  data-amount="25"
+  data-currency="USD">
+  Buy for $25 USD
 </button>
 ```
 
