@@ -732,8 +732,18 @@ Le widget gère automatiquement les spécificités de chaque mode de paiement :
   1. Le widget initie la transaction et récupère le lien de paiement sécurisé fourni par la passerelle.
   2. **Un nouvel onglet s'ouvre automatiquement (`_blank`)** vers la page de paiement sécurisée pour permettre à l'utilisateur de régler sa transaction.
   3. **L'onglet initial avec le widget reste grand ouvert** : il affiche l'écran de vérification avec un bouton de secours cliquable (*« 🔗 Ouvrir la page de paiement »*) si les fenêtres popups sont bloquées.
-  4. Le widget effectue un **contrôle continu en arrière-plan (polling toutes les 2.5 secondes)**.
+  4. Le widget effectue un **contrôle continu en arrière-plan (polling toutes les 2.5 secondes)** tant que la transaction est en attente (`pending`), sans interruption arbitraire de 5 minutes, jusqu'à la confirmation finale.
   5. Dès que le client a finalisé le règlement et que la passerelle confirme l'opération, le widget dans l'onglet initial bascule automatiquement sur l'**écran vert de succès** et exécute votre fonction `callbackReussite(data)`.
+
+---
+
+#### 🇨🇲 Détection Intelligente & Commutation Automatique des Numéros (Orange Money & MTN MoMo)
+
+Pour garantir un taux de conversion maximal et zéro échec de paiement lié à une erreur de sélection de l'acheteur :
+* **Orange Cameroun :** Préfixes reconnus `690 à 699` et `655 à 659` (validation USSD `#150*50#`).
+* **MTN Cameroun :** Préfixes reconnus `670 à 679`, `680 à 683` et `650 à 654` (validation USSD `*126#`).
+* **Auto-commutation intelligente :** Si un client tape un numéro Orange alors que MTN est actif (ou vice-versa), le SDK, le widget et l'API BaaS basculent automatiquement l'opérateur vers la méthode adéquate afin d'éliminer toute erreur de format rejetée par l'agrégateur.
+* **Résilience réseau :** Les requêtes Mobile Money NoKash intègrent un mécanisme de re-tentatives automatiques (retry) et une protection SSL sans blocage sur Windows/Linux.
 
 ---
 
@@ -745,6 +755,7 @@ Vous pouvez configurer l'apparence du widget **directement depuis la Console Dé
 | :--- | :--- | :--- | :--- |
 | **`amount`** / `data-amount` | Montant de la transaction | Dérivé du projet / 0 | `5000` ou `25` |
 | **`currency`** / `data-currency` | Devise de paiement (`XAF`, `USD`, `EUR`, etc.) | `"XAF"` | `"USD"`, `"EUR"`, `"XAF"` |
+| **`baseUrl`** | URL racine personnalisée de l'API CamSchool BaaS | Détectée automatiquement (`https://camschool.kmrshop.com`) | `"https://camschool.kmrshop.com"` |
 | **`label`** / `data-label` | Sous-titre descriptif / libellé de l'action de paiement | `"Paiement sécurisé et instantané"` | `"Règlement de vos achats"` |
 | **`Widget title hex color`** | Couleur hexadécimale du titre du widget (Secondary) | `"#1E1B4B"` (Dark Indigo) | `"#0F172A"` ou `"#111827"` |
 | **`Widget hex color`** | Couleur hexadécimale principale des boutons et accents (Primary) | `"#FF6B00"` (Orange CamSchool) | `"#10B981"` ou `"#2563EB"` |

@@ -186,13 +186,13 @@ export class BaasPayments {
     }
   ): Promise<BaasTransaction> {
     const interval = options?.intervalMs || 3000;
-    const timeout = options?.timeoutMs || 300000; // 5 min
+    const timeout = options?.timeoutMs; // Par défaut pas de limite : attend tant que le statut est pending
     const startTime = Date.now();
 
     return new Promise((resolve, reject) => {
       const timer = setInterval(async () => {
         try {
-          if (Date.now() - startTime > timeout) {
+          if (timeout && Date.now() - startTime > timeout) {
             clearInterval(timer);
             return reject(new Error('Paiement expiré (Timeout).'));
           }
